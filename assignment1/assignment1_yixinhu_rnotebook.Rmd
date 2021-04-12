@@ -52,9 +52,9 @@ summary(covariate_scores)
 ```
 
 
-Looking at the summary of the models above along with the descriptive statistics of the *lab* and *score* variables, it is extremely difficult to come up with a good explanation as to what is going on. Not only is the coefficient on the *lab* variable statistically insignificant (p-value at 0.355 for the first model, and 0.110 for the second), but when taking the summary statistics of *lab* and *score*, it also lacks a clear economic interpretation and significance. 
+Looking at the summary of the models above along with the descriptive statistics of the *lab* and *score* variables, it is extremely difficult to come up with a good explanation as to what is going on. Not only is the coefficient on the *lab* variable statistically insignificant (p-value at 0.355 for the first model, and 0.110 for the second), but when taking the summary statistics of *lab* and *score*, it also lacks a clear economic interpretation and significance.
 
-In particular, notice the scores range from 1.88 to 1312.939 yet the model reports the coefficient on the *lab* regressor to be 2.507 for the first model, and 4.363 for the second. This is a very insignificant amount when looking at the large range of test scores and does not lead to any sound economic interpretations as to the efficacy of attending the lab school (not to mention that the *lab* variable itself has a max value of *3*, where if it were only a dummy indicating whether or not an individual is attending lab school, we would expect *{0,1}*). Due to all these complications, the results here lack any statistical and economic significance to draw any plausible conclusion.
+In particular, notice the scores range from 1.88 to 1312.939 yet the model reports the coefficient on the *lab* regressor to be 2.507 for the first model, and 4.363 for the second, as well as the extremely low R-squareds and very high residual standard errors. This is a very insignificant amount when looking at the large range of test scores and does not lead to any sound economic interpretations as to the efficacy of attending the lab school (not to mention that the *lab* variable itself has a max value of *3*, where if it were only a dummy indicating whether or not an individual is attending lab school, we would expect *{0,1}*). Due to all these complications, the results here lack any statistical and economic significance to draw any plausible conclusion.
 
 ### Question 2:
 
@@ -481,7 +481,11 @@ working_df <- working_df %>%
 ```
 Here, we have identified 3885 completely identical rows (ID or otherwise), and removed them accordingly.
 
-Then, I found all the distinct id-negative_99 pairs. This is to see if we can eliminate the rest of the repeated rows by considering instances where we had garbage data (ie. -99s). As a result, by filtering out garbage data, we were able to directly arrive at our desired state -- where we have all unique IDs! Therefore, I will not need to do the third step in our operation (looking at individual cases), and I am also able to remove the was_neg99 column, since it no longer has any meaning in our analysis (since all rows originally with -99s are gone). From here, I will move forward with Q3.
+Then, I found all the distinct id-negative_99 pairs. This is to see if we can eliminate the rest of the repeated rows by considering instances where we had garbage data (ie. -99s). As a result, by filtering out garbage data, we were able to directly arrive at our desired state -- where we have all unique IDs! Therefore, I will not need to do the third step in our operation (looking at individual cases), and I am also able to remove the was_neg99 column, since it no longer has any meaning in our analysis (since all rows originally with -99s are gone). Now that we have a dataframe with no duplicate observations, I will now remove columns which do not make sense. Specifically, I will remove all rows which have either -1 or 3 for the lab attendence variable. I realize that there could be interpretion such that the -1s are typos of 1s etc, but I believe that sacrificing these rows so no bias is introduced will be more constructive. 
+```{r}
+working_df <- subset(working_df,lab==1|lab==0)
+```
+From here, I will move forward with Q3.
 
 ### Question 3: 
 With your cleaned data, re-estimate and report the treatment effects for the two methods in question 1, assuming the randomization is valid. What are the differences in results between the two methods?  Do the estimates imply a big or small impact of the school?  Positive or negative? Is one estimate more convincing than the other? 
@@ -526,7 +530,7 @@ corrplot.mixed(cor(ctn_only_tinydist),title = "Tiny Distance", mar=c(0,0,1,0))
 corrplot.mixed(cor(ctn_only_tinypscore),title = "Tiny Past Score", mar=c(0,0,1,0))
 corrplot.mixed(cor(ctn_only_df),title = "Tiny DF", mar=c(0,0,1,0))
 ```
-Notice that each of the tiny dataframes gives very slightly different results. It is quite interesting that removing outliers for any of the aforementioned variables in the dataframe will generally decrease the correlations between the variables. However, this is a trade-off that I believe will be helpful in producing a more concrete analysis because we would not want outliers to skew our results. With everything ready, I will move forward with regressions.
+Notice that each of the tiny dataframes gives very slightly different results. It is quite interesting that removing outliers for any of the aforementioned variables in the dataframe will generally decrease the correlations between the variables. However, this is a trade-off that I believe will be helpful in producing a more concrete analysis because we would not want outliers to skew our results. Furthermore, all variables are positively correlated with each other with varying degrees of correlation, and that past scores are the most highly correlated item with present scores, regardless of the different With everything ready, I will move forward with regressions.
 
 ### Step 2: Producing Regressions 
 
@@ -543,11 +547,192 @@ summary(nocov_reg_dist)
 summary(nocov_reg_pscore)
 summary(nocov_reg_fulldf)
 ```
-Here, we have produced 4 regressions, the first three consists of removing outliers of particular variables, where the last is the full clean dataframe. In all of the new regressions, we have much more interpretable and believeable results. Furthermore, it is very interesting that removing outliers in our data (regardless of category), strengthens both the economic significance (larger magnitude of coefficient) as well as statistical significance (p-values) of our regression. To address the question at hand, I will move forward with the model with covariates and compare the simple model above with the final model with cerntain covariates.
+Here, we have produced 4 regressions, the first three consists of removing outliers of particular variables, where the last is the full clean dataframe. In all of the new regressions, we have much more interpretable and believeable results. Furthermore, it is very interesting that removing outliers in our data (regardless of category), strengthens both the economic significance (larger magnitude of coefficient) as well as statistical significance (p-values) of our regression. However, this regression is effectively saying *"not a single other characteristic of an individual under the current assumptions could explain a variation in the future scores.* However, I do not think it is the case, even with the current valid lottery assumptions. I will move forward with the model with covariates and compare the simple model above with the final model with cerntain covariates.
 
 #### Step 2.2: Replicating 
 Now adding more covariates into the model, we must consider what should be the proper variables to consider. I believe the first variable to consider is past scores. This is because of the following reasons:
  + Theoretically, I believe that one's ability to take previous exams should serve as an indication for their ability to take future exams. This is because their overall 'competency' for taking the same exam over time should be more or less consistent, i.e. someone not that great at taking the standardized test wouldn't be an awesome exam taker out of the blue. On the other hand, a great exam taker has no reason to suddenly become terrible with standardized tests. Therefore, not accounting for these situations in our model would skew our conclusion on the effectiveness of attending the lab school.
  + Emperically, the correlation between the two scores are quite high, and this high correlation which indicates how the two columns are interrelated should be taken into account when constructing a model. Else the error term on the regression would be quite high.
  
-Now that I have argued for the inclusion of the past scores, I would also like to argue that 
+It should also be noted that I am **not** going to consider (for now) other variables such as distance and income, even though they do show some interesting correlations. This is because I am still following the assumption that the lottery is valid, which results in the following interpretation. Under the valid lottery assumption, there is no reason to believe that income and distance has any affect on current scores for two reasons:
+ + There is no reason to believe that somehow living closer to a school, or one's parents having more income, directly explains one's ability to take exams.
+ + More critically, one could argue that individuals with higher income or live closer to the school are more likely to get in, and thus we need to control for these variables. However, remember that the current assumption is a valid lottery, which means that regardless of any factor (income, distance etc.) we are assuming that anyone is equally likely to get picked into the lab school. Therefore, while these are valid arguments, it is under under the current assumptions that these controls are currently unnecessary.
+ 
+With our intuition written, the regression, with each of the data frames is:
+```{r}
+reg_inc <- lm(data = tiny_inc_df, score ~ lab + past_score)
+reg_dist <- lm(data = tiny_dist_df, score ~ lab + past_score)
+reg_pscore <- lm(data = tiny_pscore_df, score ~ lab + past_score)
+reg_fulldf <- lm(data = working_df, score ~ lab + past_score)
+
+summary(reg_inc)
+summary(reg_dist)
+summary(reg_pscore)
+summary(reg_fulldf)
+```
+Here we have a slightly different result from before. Between the regressions which control for past scores, we see varying magitudes of the coefficients, standard errors, and statistical significance, but these values all have the same sign, and their magnitudes have small enough differences to where I would believe that they tell the same story: the lab school positively affects exam outcomes by around 0.44~0.48 points. The economic significance will vary by people, (if someone believes that an increase in 0.44~0.48 is necessary for, say college admissions, then it might be economically significant to them), but in general, these values are statistically significant and one could argue for economic significance. After controlling for past scores, we see the coefficient on lab has increased by about 0.3 points while retaining statistical significance, decreasing standard error, and *vastly* increasing the R-squared value (even if it is not exactly a fair comparison between different regressions, it is still worth noting that the R-squared has increaded by a lot). One explaination/interpretation of the regressions above is the following: After controlling for past scores, we are effectively controlling for those individuals who might not excel at exam taking *even if* they attend lab school. In doing so, we are able to make a stronger argument about the actual effectiveness of attending the lab school, and that the lab school is in effect "not to blame" for not being able to increase scores if certain individuals do not excel at exam taking. In fact, one could interpret the regression as that one's previous scores matters much more when looking at future scores, and the lab school might not be that economically significant after all (but people will have different arguments). For the aformentioned reasons, I believe that the second regression type (controlling for past scores), is more economically interpretable under the valid lottery assumption, which shows a small, positive effect of attending lab school on future scores.
+
+###Q4: Professor Levitt sometimes makes mistakes. What evidence would you present to convince him that acceptance to LLS is not determined by a valid lottery?
+
+Notice that every analysis above is made under the assumption that the lottery is valid, and I have gone to great lengths at reinforcing that the previous kind of thinking only works under the valid lottery assumption. Now I seek to use simple visualizations in the raw data to show that the lottery is indeed invalid.
+
+First off, I will operate on the definition that a "valid lottery" means "a random sampling of the population", where every single individual in the population has equal chance of being selected by said lottery. If that is indeed the case, I would expect that individuals' characteristics who go to lab school to be extremely similar to those who do not go to lab school, and that their only difference is lab school attendence. However, notice the following graphs: These are comparison between past scores, income, distance from the school of those who attend the lab school and those who don't. For each graphic, I used the full clean data as well as the corresponding tiny data to that variable. 
+```{r}
+lab_df <- working_df %>% 
+  filter(lab==1)
+
+nolab_df <- working_df %>% 
+  filter(lab==0)
+
+lab_comb <- rbind(lab_df,nolab_df)
+
+lab_pscore_distr <- lab_comb %>% 
+  ggplot(aes(x=past_score)) +
+  geom_density(data = lab_df, fill = "blue", alpha = 0.4) + 
+  geom_density(data = nolab_df, fill = "red", alpha = 0.4) +
+  ggtitle("Distribution of past scores between lab school students and non students")
+
+lab_dist_distr <- lab_comb %>% 
+  ggplot(aes(dist)) +
+  geom_density(data = lab_df, fill = "blue", alpha = 0.4) + 
+  geom_density(data = nolab_df, fill = "red", alpha = 0.4) +
+  ggtitle("Distribution of distance to lab between lab school students and non students")
+
+lab_income_distr <- lab_comb %>% 
+  ggplot(aes(income)) +
+  geom_density(data = lab_df, fill = "blue", alpha = 0.4) + 
+  geom_density(data = nolab_df, fill = "red", alpha = 0.4) +
+  ggtitle("Distribution of income between lab school students and non students")
+
+lab_pscore_distr
+lab_dist_distr
+lab_income_distr
+```
+Here, we see that the visual analysis tells us that there is indeed characteristic difference between lab students and non-lab students. In particular, the most significant aspect of this uneven characteristic distribution is the distance. We see a sharp spike of individuals who live very close to lab relative to those who do not go to lab. If this is indeed a valid lottery, this discrepency should never occur. Therefore, even just looking at distance shows a characteristic difference between those who go to lab and those who don't. Of course, it is also worth noting that the distributions of past scores and income are slightly different, but distance is nevertheless the most significant issue at hand.
+
+More over, we can look at the distributions of categorical data. I will seek to show that there is indeed difference between the charactoristics of those who go to lab school and those who don't. I will use bargraphs to indicate this difference. Specifically, we would expect that, under a valid lottery, that there should be no disproportionate data (i.e. a certain ethnicity or gender is disproportionately more likely to attend lab school relative to their proportion in the population). This will be indicated by a split in a single bar: if it was a valid lottery, then the bar should split equally, otherwise, it will be a description of disportportional data between the two groups. To note, the bars highlighted in red represents the individuals that goes to lab school.
+```{r}
+lab_gender_distr <- lab_comb %>% 
+  ggplot(aes(x=as.factor(gender))) +
+  geom_bar(data = lab_df, color="red", alpha = 0.4) + 
+  geom_bar(data = nolab_df, alpha = 0.4) +
+  ggtitle("Distribution of gender between lab school students and non students")
+
+lab_race_distr <- lab_comb %>% 
+  ggplot(aes(x=as.factor(race))) +
+  geom_bar(data = lab_df, color="red",alpha = 0.4) + 
+  geom_bar(data = nolab_df, alpha = 0.4) +
+  ggtitle("Distribution of race to lab between lab school students and non students") +
+  labs()
+
+lab_sports_distr <- lab_comb %>% 
+  ggplot(aes(as.factor(plays_sports))) +
+  geom_bar(data = lab_df, color="red", alpha = 0.4) + 
+  geom_bar(data = nolab_df, alpha = 0.4) +
+  ggtitle("Distribution of sports between lab school students and non students")
+
+lab_gender_distr
+lab_race_distr
+lab_sports_distr
+```
+Amongst the categorical variables, it seems that gender does not contain significant disproportionate data, and sports show small discrepencies. However, race data  does show some discrepancy between those who do enter lab school and those who don't. In particular, individuals labeled "H" and "W" are proportionally less likely to be attending lab, where as individuals labeled "B" are more likely to be attending lab. Therefore, it is shown visually that there is descrepency between the two groups, and thus on the level of the categorical data, it seems that race data goes against our intuition of a "valid lottery".
+
+Combining the analyses above, we see that the so called "valid lottery" seems to have a bias towards individuals who live close to the school and those labeled "B". If we set the definition of "valid lottery" as a "random sampling" of the population, then this evidence goes against the definitions, which indicates that the "valid lottery" is not exactly valid after all.
+
+###Question 5: 
+Now explain how you think students actually get into the school, based on your analysis of the data. Assuming your hypothesis is correct, is it possible to estimate a causal impact of attending the school on test scores? Do your best providing an estimate and standard error. 
+
+Following directly what we have found in Question 4, I will move forward to argue that distance might serve to point at a causal relation between the effectiveness of lab education on exam scores. First off, I would like to follow up from Q4: judging by the distribution on distance between those who attend and those who do not attend the lab school, I believe  what is really happening is that the so called 'valid lottery' is conducted with a kind of self-selction bias involved: *those who are close to the school might be more likely to put their names into the lottery, and vice versa with those who are far.* To that note, It would be helpful check the characteristic of individuals who live close to the school vs those who live far. Here, I will segment the entire population at hand into those living "close" and those living "far", this cutoff will be motivated by the visual peak indicated by the distance data. Specifically, I will segment the data based on the 50% percentile of individuals's distance to the school. 
+
+```{r}
+distance_cutoff <- quantile(working_df$dist,0.5) 
+
+close_df <- working_df %>% 
+  filter(dist < distance_cutoff)
+
+far_df <- working_df %>% 
+  filter(dist >= distance_cutoff) 
+
+dist_comb <- rbind(close_df,far_df)
+
+close_df %>% 
+  ggplot(aes(x=race)) +
+  geom_bar() + 
+  ggtitle("Close to school ethic distributions")
+
+far_df %>% 
+  ggplot(aes(x=race)) +
+  geom_bar() + 
+  ggtitle("Far from school ethic distributions")
+
+close_df %>% 
+  ggplot(aes(x=gender)) +
+  geom_bar() + 
+  ggtitle("Close to school gender distributions")
+
+far_df %>% 
+  ggplot(aes(x=gender)) +
+  geom_bar() + 
+  ggtitle("Far from school gender distributions")
+
+close_df %>% 
+  ggplot(aes(x=plays_sports)) +
+  geom_bar() + 
+  ggtitle("Close to school sports distributions")
+
+far_df %>% 
+  ggplot(aes(x=plays_sports)) +
+  geom_bar() + 
+  ggtitle("Far from school sports distributions")
+
+cf_income <- dist_comb %>% 
+  ggplot(aes(x=income)) +
+  geom_histogram(data=close_df,color="blue") +
+  geom_histogram(data=far_df,color="red")
+
+cf_pscore <- dist_comb %>% 
+  ggplot(aes(x=past_score)) +
+  geom_histogram(data=close_df,color="blue") +
+  geom_histogram(data=far_df,color="red")
+
+cf_income
+cf_pscore
+
+close_df %>% 
+  ggplot(aes(x=income)) +
+  geom_histogram() + 
+  ggtitle("Close to school income distributions")
+
+far_df %>% 
+  ggplot(aes(x=income)) +
+  geom_histogram() + 
+  ggtitle("Far from school income distributions")
+
+
+working_df %>% 
+  ggplot(aes(x=dist)) +
+  geom_density()
+```
+From the two graphs, we see that "H" is more or less consistent between the two categories of "close" and "far". However, more interesting is the other ethnic compositions, where "B" is more concentrated near the school, and "W" and "A" is proportionally concentrated far from the school. Furthermore, we see that those who live "close" to the school is more likely to have a lower income relative to those who live "far", and those who live "close" also tend to have lower scores than those who live "far". This is interesting as we have previously identified that ethnicity and distance are quite different between those who attend the school and those who don't. However, gender and sports participation does not vary with closeness to the school. All being said, we may want to use these variables which have significant difference as a method to control for how the school actually impacts scores. But first, I would like to make a new variable called "closeness", defined by "(dist - max)/(max - min)". I recognize this is a normalization process, and requires new interpretions of the coefficients. However, since those who live close to the school generally go to the school, I believe that this is a more intuitive measure of how distance may play a role in determining whether someone attends lab or not.
+
+```{r}
+working_df <- working_df %>% 
+  mutate(closeness = (max(dist) - dist)/(max(dist)-min(dist)))
+```
+
+As seen from above, they are effectively inverses of each other when looked at from a density stand point. Now we will use this to describe how closeness to the school may serve as a way to understand the causal effectiveness of attending lab school. In particular, there is no reason to believe that living close to the lab school has a direct effect on one's ability to improve their exam scores. Furthermore, unlike income, which may be used to improve one's score by purchasing tutoring services, distance to a school does not have such a characteristic where it can vary one's testing improvement level other than attending the school itself. Of course, one could say that we could have confounding factors if there is a school that is far from the lab school that excels at improving standardized test scores, and thus being further from the school might also have a positive effect on grades. However that would be extremely difficult to argue for. Intuitively, this is because distance is a radius measure: unless somehow the lab school is surrounded (concentrically) by other prep-schools, it is not necessarily the case that distance inherently contains structural flaws for it to be a instrument of measurement. Furthermore, we have also identified that distance and race could have interactions which skew our final regression result. Therefore, I will add race as a control to control for the variation due to this characteristic. With all that said, I will now measure how closeness to the school can affect one's scores through attending lab school. Since we have identified past scores, income, and race as the key differences in distance, I will control for these effects as we move on. In a word: individuals closer to the school tend to enroll in the school more often, but this distance to a school might not otherwise affect one's ability to improve test scores. Therefore distance, once controlled for, should be a good instrument for measuring the true effectiveness of attending the lab school.
+
+```{r}
+reg_dist_cause <- lm(data=working_df, score ~ closeness + past_score + as.factor(race))
+
+reg_aug1 <- lm(data=working_df, score ~ closeness + past_score + income + as.factor(race)) #+income
+
+reg_aug2 <- lm(data=working_df, lab ~ closeness + past_score + income + as.factor(race)) #interpret as the probability of attending lab
+
+summary(reg_dist_cause)
+summary(reg_aug1)
+summary(reg_aug2)
+```
+Taking the regression coefficients of aug1 and aug2, as well as the argument provided above, I conclude that the true effectiveness of attending the lab school is (Using the IV formula) $\hat{\beta}_{True} = \frac{\hat\beta^{score}_{closeness}}{\hat\beta^{lab}_{closeness}} = \frac{0.362}{1.101}=0.357$, where the standard error on $\hat\beta^{score}_{closeness}$ is $0.145$ and the standard error on $\hat\beta^{lab}_{closeness}$ is $0.061$. 
+
+
