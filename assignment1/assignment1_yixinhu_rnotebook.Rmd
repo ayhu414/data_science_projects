@@ -18,7 +18,7 @@ type (chr,dbl,... etc), as well as noting the variables at hand
 and number of observations (rows). Until otherwise stated, I will assume that those who entered the lab school were indeed enrolled through a 'valid lottery', meaning that it is a random sample of the population in question.
 
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, results='hide',message=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(stringr)
@@ -35,16 +35,16 @@ Note that there are multiple items that jumps out, (take the -99 min income for 
 
 Now to address the question: estimating the treatment effect of attending lab school (variable: *lab*) on current scores (variable: *score*). According to the question, the following directly measures the treatment effect on the raw data without considering covariates. I will give a summary output directly following each model and at the end give a verbal discussion on both models. 
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 no_covariate_scores <- lm(data = raw_data, score ~ lab)
 
 summary(no_covariate_scores)
 ```
 #### Step 2.2: Adding covariates as controls
 
-In adding more covariates, I believe that past performance on tests will give information on the current performance on tests. Therefore, I will be adding the past scores data (variable: *past_score*) into the model as a covariate to control over.
+In adding more covariates, I believe that past performance on tests will give information on the current performance on tests. Therefore, I will be adding the past scores data (variable: *past_score*) into the model as a covariate to control over. The justification is that, even under the current assumption that the lottery is valid, one's previous ability to take an exam will contain information about one's ability to take an exam right now. Therefore, I believe that controlling for past scores is necessary to grasp at a more sensible interpretation of the regression by removing the information given by past scores that might by captured within the lab variable.
 
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 covariate_scores <- lm(data = raw_data, score ~ lab + past_score)
 
 summary(covariate_scores)
@@ -64,7 +64,7 @@ Clean the data. This may or may not require you to delete, transform, standardiz
 
 First, I will generate graphs for each of the variables to get a high-level understanding of the data we are dealing with. Here, I will take a look at scores, past scores, incomes, and distances from the lab school. For each of the four graphs, it will be a simple histogram to show the frequency of each observation. The x-axis will be the actual values found in the data, and the y-axis will be the count of particular observations. Furthermore, I will show the summary statistics of each variable after the graphs, as well as checking for NA values in each of the variables with graphs
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 working_df <- raw_data  #make a working dataframe and leave the raw data intact
 
 gp_income <- working_df %>% 
@@ -105,13 +105,12 @@ gp_lat <- working_df %>%
 
 ggarrange(gp_pscores,gp_scores,gp_income,gp_dist,
           ncol=2,nrow=2)
-ggarrange(gp_long,gp_lat,
+ggarrange(gp_lat,gp_long,
           ncol=2,nrow=1)
-
 #Note, two groups of graphs will be generated but not displayed in one screen, please navigate between the two!
 ```
 
-```{r}
+```{r,include=FALSE}
 cat("Summary Statistics for Past Score\n")
 summary(working_df$past_score)
 cat(" Number of NA values:", sum(is.na(raw_data$past_score)), "\n\n")
@@ -137,14 +136,14 @@ I will summarize the information for each variable and potential next steps in d
 (First, rejoice that we didn't find any NA values.)
 
 1. Past Scores:
-  + I believe this shows a very plausible and convincing distribution. This is because, assuming standardized testing (such as the SAT) will often times normalize/curve their scores according to a distribution. Thus this gives us a very convincing collection of data because it fits a seemingly normal distribution.
+  + I believe this shows a very plausible and convincing distribution. This is because, assuming standardized testing (such as the SAT) will often times normalize/curve their scores according to a distribution, the visualization seems to indicate no outstanding features that we do not otherwise expect. Thus this gives us a very convincing collection of data because it fits a seemingly normal distribution.
   Furthermore, there are no extreme outliers, negative values, NAs, or anything out of the ordinary.
 
 2. (Current) Scores:
-  + Recall that I did not restrict the width of the histogram, and thus the histogram in question will include all instances of scores. This visual aid indicates that, while most entries are situated around 0, there are extreme outliers in this data (such as the max value of 1312.939) since the median is situated at 8.251. Given the cleaner nature of past scores, I will make the assumption that the scoring scheme for this standardized testing has not changed overtime (as there is still quite a lot of values situated near 0), and use *past scores as a reference to clean the current scores data.*
+  + Recall that I did not restrict the width of the histogram, and thus the histogram in question will include all instances of scores. This visual aid indicates that, while most entries are situated around 0, there are extreme outliers in this data (such as the max value of 1312.939) since the median is situated at 8.251. Given the cleaner nature of past scores, I will make the assumption that the scoring scheme for this standardized testing has not changed overtime (as there is still quite a lot of values situated near 0), and use **past scores as a reference to clean the current scores data.**
   
 3. Income:
-  + The graph for income shows a relatively normal distribution similar in shape to that of the past scores (which seems more or less clean). However, there are more than 900 values situated *below zero*. This requires further investigation because we see from the summary statistics that the minimum value is *-99*, which like the infamus *-999* will require careful cleaning.
+  + The graph for income shows a relatively normal distribution similar in shape to that of the past scores (which seems more or less clean). However, there are more than 900 values situated **below zero**. This requires further investigation because we see from the summary statistics that the minimum value is *-99*, which like the infamus *-999* will require careful cleaning.
 
 4. Frequency in Distance from Lab:
   + Similar to the current scores, the visual representation of this graph shows a strong concentration of observations near zero, and outlying values which stretch to 13609.374. However, it could very well be a common error regarding units (i.e. some inputs kilometres while others inputs metres). To justify my thinking (assuming that the difference in units is just a two-way difference such as km and m), **I will see if scaling down the outlying values (starting from around 2500 units) will give us a more sensible result**.
@@ -154,8 +153,8 @@ I will summarize the information for each variable and potential next steps in d
 
 #### Step 1.1: Looking at categorical variables
 
-Now I will repeat the visualization and summarization process as shown above, but this time for the categorical variables. Here, I will be using bar charts to visualize the variables gender, race, sports and lab school attendance. This is meant to see the unique values of each categorical variable and their frequency. In doing so, we may catch repeating values (such as 'male' and 'M') amongst other inconsistencies.
-```{r}
+Now I will repeat the visualization and summarizing process as shown above, but this time for the categorical variables. Here, I will be using bar charts to visualize the variables gender, race, sports and lab school attendance. This is meant to see the unique values of each categorical variable and their frequency. In doing so, we may catch repeating values (such as 'male' and 'M') among other inconsistencies.
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 gp_gender <- working_df %>% 
   ggplot(aes(x=gender)) +
   geom_bar(fill='blue',alpha=.7) +
@@ -187,13 +186,15 @@ gp_incbuck <- working_df %>%
   ggtitle("Frequency of Income Buckets") +
   theme(plot.title = element_text(size=11,hjust=0.5))
 
+```
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 ggarrange(gp_gender,gp_race,gp_lab,gp_incbuck,
          ncol=2,nrow=2)
 
 gp_sport #showed separately due to squeezing names
 ```
 
-```{r}
+```{r,include=FALSE}
 cat("->Counts for unique entries in gender")
 table(working_df$gender)
 cat("  Number of NA values:", sum(is.na(working_df$gender)), "\n\n")
@@ -226,13 +227,13 @@ Again, rejoice in that we do not have NA values.
 #### Step 1.3: ID
 
 I have reserved the ID variable to a section of its own because it deserves special attention. This is because identification should be representative of an unique observation (which means that each row, which represents a unit of observation, should have their own ID). Therefore, this will be the key to conduct all the aformentioned data cleaning. The only item to check is to see whether or not the IDs are unique. In the following function, I will return all the ID values that are unique.
-```{r}
+```{r,echo=FALSE, warning=FALSE}
 sum(duplicated(working_df$student_id) == TRUE)
 ```
 It looks like that there are 9994 IDs that are duplicated. Therefore, the next course of action is threefold:
-  + to delete completely identical rows
-  + to delete rows with duplicated ids yet extremely faulty information in one specific category (i.e. for two ID entries, all else the same, one has a -99 in the income category; then delete the one with the -99 in the income category)
-  + to carefully the rows with duplicated ids, but both has very 'believable' data.
+  1. to delete completely identical rows
+  2. to delete rows with duplicated ids yet extremely faulty information in one specific category (i.e. for two ID entries, all else the same, one has a -99 in the income category; then delete the one with the -99 in the income category)
+  3. to carefully the rows with duplicated ids, but both has very 'believable' data.
   
   
 ### Step 2: Cleaning the data accoring to our observational conclusions
@@ -241,9 +242,9 @@ In the following sections, I will clean each of the indicated variables which re
 
 #### Step 2.1: Cleaning continuous data:
 
-First, I will deal the -99s identified within income. I will follow the direction indicated in our class: I will first set the all the -99 to zero. However, recall that we have double counted IDs, and thus there is a possibility where we can reasonably delete the rows with faulty data (i.e. if all else equal, two identical rows only differ in income, where one has -99 and the other has a more believeable value, I believe it would be sensible to delete the row with the faulty income data). With that in mind, I will change -99s to 0s in case of a regression, and identify rows where we might delete the rows outright.
+First, I will deal the -99s identified within income. I will follow the direction indicated in our class: I will first set the all the -99 to zero. However, recall that we have double counted IDs, and thus there is a possibility where we can reasonably delete the rows with faulty data (i.e. if all else equal, two identical rows only differ in income, where one has -99 and the other has a more believeable value, I believe it would be sensible to delete the row with the faulty income data). With that in mind, I will change -99s to 0s in case of a regression, and identify rows where we might delete the rows outright. The following print out gives the amount of rows with income below zero, which happens to all be -99s.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 sum(working_df$income < 0)
 #1115
 
@@ -253,21 +254,21 @@ working_df <- working_df %>%
   
 ```
 
-Now we will look at scores. As previously noted, past scores seems to have a fairly reasonable distribution, meaning no NAs, extreme outliers, and follows a normal distribution as we expect from a standardized test. Judging by what I found previously with the past scores and current scores, I will use the past scores as a reference point to determine what the 'reasonable' score range should be for the current scores.
-```{r}
+Now we will look at scores. As previously noted, past scores seems to have a fairly reasonable distribution, meaning no NAs, extreme outliers, and follows a normal distribution as we expect from a standardized test. Judging by what I found previously with the past scores and current scores, I will use the past scores as a reference point to determine what the 'reasonable' score range should be for the current scores. The first set of summary statistics is about past scores, the second one concerns current scores.
+```{r,echo=FALSE, warning=FALSE}
 summary(working_df$past_score)
 summary(working_df$score)
 ```
 
-Judging by the the summary stats and visualizatios, I believe that the maximum score on the standardized test, assuming that how the test calculates scores is consistent between the two times, the tests scores should be upwardly bounded around 15. First, I will do a very "hardcoded" operation to tease out the local upper boundaries of the group of scores near 0 on the visualization.
+Judging by the the summary stats and visualizatios, I believe that the maximum score on the standardized test, assuming that how the test calculates scores is consistent between the two times, the tests scores should be upwardly bounded around 15. First, I will do a very "hardcoded" operation to tease out the local upper boundaries of the group of scores near 0 on the visualization. In particular, I simply placed bins and found a steady value where the number of observations do not change for a long period of time. (See code for reference)
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE,results='hide'}
 for (val in c(13,14,15,20,50)){
   cat("this is the number of scores above ",val,":",sum(working_df$score > val),"\n")
 }
 ```
-Even in this very "hardcoded" or "theoryless" operation, we are able to tease out how many scores are above a certain cutoff. In doing so, we can more clearly see what the cutoff could be. Now, making the assumption for now that 15 is our cut off, I would like to see what is the **maximum** value that is **below** 15 and the **minimum** value that is **above** 15. In doing so, I wish to show that, under the assumption that scores should be roughly normal, we have no reason to expect a very large gap in scores
-```{r}
+Even in this very "hardcoded" or "theoryless" operation, we are able to tease out how many scores are above a certain cutoff. In doing so, we can more clearly see what the cutoff could be. Now, making the assumption for now that 15 is our cut off, I would like to see what is the **maximum** value that is **below** 15 and the **minimum** value that is **above** 15. In doing so, I wish to show that, under the assumption that scores should be roughly normal, we have no reason to expect a very large gap in scores.
+```{r,echo=FALSE, warning=FALSE,message=FALSE,results=FALSE}
 below15 <- working_df %>% 
   select(score) %>% 
   filter(score<=15) 
@@ -280,8 +281,9 @@ below15 %>%
 above15 %>% 
   summarize(min = min(above15))
 ```
-Notice that there is a big jump from the cutoff below15 and above15! The max value below 15 is 14.302 where as the min value above 15 is 277.258. Furthermore, I will split the score data from 15 and check the distributions for those scores below and those scores above:
-```{r}
+  The result is that max(below15) = 14.3, and min(above15) = 266.25. Notice that there is a big jump from the cutoff below15 and above15! The max value below 15 is 14.302 where as the min value above 15 is 277.258. Furthermore, I will split the score data from 15 and check the distributions for those scores below and those scores above:
+  
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 gp_below15 <- below15 %>% 
   ggplot(aes(x=score)) +
   geom_histogram(fill='blue',alpha=.7) +
@@ -297,8 +299,9 @@ gp_above15 <- above15 %>%
 ggarrange(gp_below15,gp_above15,
          ncol=2,nrow=1)
 ```
-Here, we get a very interesting result! Once we subdivide the score variable to those above 15 and below 15, we find that each looks somewhat normally distributed, which is exactly what we expect from a standardized exam score. Now looking at the score ranges of the two series, I suspect that the scores above 15 are created due to a missing decimal point which caused all data to be scaled up by 100 times. To show this, I will divide the scores from above 15 by 100 and plot it together with the scores below 15 on the same graph. The following histogram shows how a rescaled version of scores above 15 fits into the overall distribution. If we do not find any outliers here, I reasonably conclude that the rescaling was successful, and that my hypothesis about the resealing factor of 100 is a reasonable argument.
-```{r}
+  
+  Here, we get a very interesting result! Once we subdivide the score variable to those above 15 and below 15, we find that each looks somewhat normally distributed, which is exactly what we expect from a standardized exam score. Now looking at the score ranges of the two series, I suspect that the scores above 15 are created due to a missing decimal point which caused all data to be scaled up by 100 times. To show this, I will divide the scores from above 15 by 100 and plot it together with the scores below 15 on the same graph. The following histogram shows how a rescaled version of scores above 15 fits into the overall distribution. If we do not find any outliers here, I reasonably conclude that the rescaling was successful, and that my hypothesis about the resealing factor of 100 is a reasonable argument.
+```{r,echo=FALSE, warning=FALSE,message=FALSE,results=FALSE}
 rescaled_above15 <- above15/100
 rescaled_score <- rbind(rescaled_above15, below15)
 
@@ -312,32 +315,22 @@ rescaled_score %>%
   geom_histogram(data = below15, fill = "purple", alpha = 0.4) +
   geom_histogram(data = rescaled_score, fill = "blue", alpha = 0.3)
 ```
-Here, the black component of the histogram at the very bottom of the graph shows the rescaled counts above 15. The purple component of the histogram shows the original scores of scores below 15. The light blue component which sticks out at the top shows the result of the compounding of the two aformentioned subcomponents. Nevertheless, this shows that there are no significant outliers, and that the rescaling fits within the normal distirbution which we expect from a standardized test. Therefore, my conclusion is that I will move forward and clean the score data by dividing all scores > 15 by the factor of 100. (I also include a confirmation plot and summary stats on scores to indicate the successful transformation)
-```{r}
+  Here, the dark blue component of the histogram at the very bottom of the graph shows the rescaled counts above 15. The purple component of the histogram shows the original scores of scores below 15. The light blue component which sticks out at the top shows the result of the compounding of the two aformentioned subcomponents. Nevertheless, this shows that there are no significant outliers, and that the rescaling fits within the normal distirbution which we expect from a standardized test. Therefore, my conclusion is that I will move forward and clean the score data by dividing all scores > 15 by the factor of 100.
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(score = ifelse(score>15, score/100, score))
-
-working_df %>% 
-  ggplot(aes(x=score)) +
-  geom_histogram(fill="purple",alpha=0.2)
 ```
 
 ### Step 2.3: Distance
 
-Now I will deal with distance the same way I have dealt with scores, which is checking for a scaling factor which we can use to bring the outliers back into the distirbution we are expecting. (Therefore I will no longer be explicitly going through all my thinking and instead provide short signposts) Here, we are not explicitly expecting a normal distribution for distance (and maybe at most even say that we expect a distirbution skewed to zero, since we expect people who goes to the school lives close to the school, but even that expectation is not completely reasonable, since they could very well just commute a longer distance).
-
-First, recall the visualization of distance:
-```{r}
-gp_dist
-```
-This time, we dont have a reference, but judging by the visualization, there could be a cut at around 2000 units, therefore:
-```{r}
+  Now I will deal with distance the same way I have dealt with scores, which is checking for a scaling factor which we can use to bring the outliers back into the distirbution we are expecting. (Therefore I will no longer be explicitly going through all my thinking and instead provide short signposts) Here, we are not explicitly expecting a normal distribution for distance (and maybe at most even say that we expect a distirbution skewed to zero, since we expect people who goes to the school lives close to the school, but even that expectation is not completely reasonable, since they could very well just commute a longer distance). This time, we dont have a reference, but judging by the visualization, there could be a cut at around 2000 units, therefore:
+```{r,include=FALSE}
 for (val in c(2500,2250,2000,1500,1000,750,500,250,100,50,20,15,10)){
   cat("this is the number of distance above ",val,":",sum(working_df$dist > val),"\n")
 }
 ```
-Again, I would like to concede the brute-force nature of this analysis, but this nevertheless indicates at least a few cutoffs we can use, since we have found multiple 'stable' counts at different values. For the sake of argument, let us take 20 as the cutoff and find the max below 20 and the min above 20, and see if this is a valid cutoff.
-```{r}
+Again, I would like to concede the brute-force nature of this analysis, but this nevertheless indicates at least a few cutoffs we can use, since we have found multiple 'stable' counts at different values, the smallest which is 20. For the sake of argument, let us take 20 as the cutoff and find the max below 20 and the min above 20, and see if this is a valid cutoff.
+```{r,include=FALSE}
 below20 <- working_df %>% 
   select(dist) %>% 
   filter(dist<=20) 
@@ -351,8 +344,8 @@ above20 %>%
   summarize(min = min(above20))
 cat("the difference between max(below20) and min(above20) is:", abs(max(below20)-min(above20)))
 ```
-  As well as the graphs of the two:
-```{r}
+  Which yields that max(below20) = 14.21, where as min(above20) is 1084.052. Hence we have identified the structural break here. As a supporting visualization, I will also show the graphs of the two:
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 gp_below20 <- below20 %>% 
   ggplot(aes(x=dist)) +
   geom_histogram(fill='blue',alpha=.7) +
@@ -368,8 +361,10 @@ gp_above20 <- above20 %>%
 ggarrange(gp_below20,gp_above20,
          ncol=2,nrow=1)
 ```
-  Notice that neither distributions have glaring issues such as extreme outliers. As there is no theoretical reason why I believe the distances should be normally distributed, it is more important that the two subsets of data are visually extremely similar. As previously, I suspect that there is a scaling issue and thus divide the distances > 20 by the factor. Here, judging by the indications on the x-axis, I will choose 1000 as the factor, as there is not only empirical evidance to do so (x-axis), there is also a theoretical reason where I suspect the different sets of data here is operating in kilometres and metres (1km = 1000m, just in case).
-```{r}
+  
+  Notice that neither distributions have glaring issues such as extreme outliers. As there is no theoretical reason why I believe the distances should be normally distributed, it is more important that the two subsets of data are visually extremely similar. As previously, I suspect that there is a scaling issue and thus divide the distances > 20 by the factor. Here, judging by the indications on the x-axis, I will choose 1000 as the factor, as there is not only empirical evidance to do so (x-axis), there is also a theoretical reason where I suspect the different sets of data here is operating in kilometres and metres (1km = 1000m, just in case). The full justification will be given after the graph.
+  
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 rescaled_above20 <- above20/1000
 rescaled_dist <- rbind(rescaled_above20, below20)
 
@@ -379,19 +374,19 @@ rescaled_dist %>%
   geom_histogram(data = below20, fill = "purple", alpha = 0.4) +
   geom_histogram(data = rescaled_dist, fill = "blue", alpha = 0.3)
 ```
-  Here, the dark blue component is the rescaled data from above 20 units. The middle shaded purple is the data from below 20 units. The light blue component is the aggregation of the two aformentioned components. Because the visual graph does not show extreme outliers or anything out of the ordinary, it seems that the rescaling was able to capture the outliers back into the distirbution that we expected. The theoretical explaination for this has been mentioned in passing, but to restate, I beleive that there was an entry error where individuals confused the units *km* and *m*, and thus explains the discrepency in the factor of 1000. (i.e. it could be that one researcher knows that the unit is *km*, while the other one thought they were using *m* instead)
-
-Now cleaning the data:
-```{r}
+  
+  Here, the dark blue component is the rescaled data from above 20 units. The middle shaded purple is the data from below 20 units. The light blue component is the aggregation of the two aformentioned components. Because the visual graph does not show extreme outliers or anything out of the ordinary, it seems that the rescaling was able to capture the outliers back into the distirbution that we expected. The theoretical explaination for this has been mentioned in passing, but to restate, I beleive that there was an entry error where individuals confused the units *km* and *m*, and thus explains the discrepency in the factor of 1000. (i.e. it could be that one researcher knows that the unit is *km*, while the other one thought they were using *m* instead).
+  
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(dist = ifelse(dist>20, dist/1000, dist))
 
-working_df %>% 
-  ggplot(aes(dist)) +
-  geom_histogram(fill="blue", alpha=0.2)
+# working_df %>% 
+#   ggplot(aes(dist)) +
+#   geom_histogram(fill="blue", alpha=0.2)
 ```
   Now moving to logitudal and latitudal data. Since I cannot reasonably find any use for the longitude and latitude data (*see full justification in Q2, section 1.1, summary point 5.*) I will proceed to delete these dataframes from our discussion to streamline the dataframe.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   select(-long,-lat)
 ```
@@ -400,7 +395,7 @@ working_df <- working_df %>%
 
   Recall the unique values in the different categorical variables race, gender, lab, and sports:
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE,results=FALSE}
 working_df %>% 
   distinct(race)
 working_df %>% 
@@ -412,17 +407,17 @@ working_df %>%
 #Note, each result shows in a different table
 ```
   Notice that race has entries "hispanic" and "black" along with "H" and "B". As seen in the output above, full names are not consistent with the naming scheme of the other categories (A and W). I will make the assumption that "hispanic" points to the same category as "H", and thus categorize "hispanic" into "H", and same logic with "black" and "B".
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(race = recode(race,"hispanic"="H","black"="B"))
 ```
   Moving to gender, I believe that a similar story is occuring based on our previous analysis. Specifically, "male" and "M" are pointing to the same category, and "female" and "F" are pointing to the same category. Therefore, in the same line of thought as before, I will recode the data accordingly.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(gender = recode(gender,"male"="M","female"="F"))
 ```
   In a similar line of thought, I believe that for the sports data, "0" means does not play sports, while "1" indicates the individual plays sports. Therefore, I believe that all the names of sports (basketball etc.) can be categorized as "1", since they do indeed play sports, its just that they have indicated a particular sport, and thus it is not counted as the category "1" -- play sports. Therefore, I will recode the data accordingly. Notice however, that the data type of the sports column is "chr", which means that I will have to recode into the charactor "1" first, and the change the column to a more convenient data type such as integer.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(plays_sports = recode(plays_sports,"soccer"="1","basketball"="1","baseball"="1","gymnastics"="1", "volleyball"="1","tennis"="1")) %>% 
   mutate()
@@ -430,7 +425,7 @@ working_df <- working_df %>%
 working_df$plays_sports <- as.integer(working_df$plays_sports)
 ```
   For the lab variable, recall from the previous section that, assuming that this variable indicates whether or not the individual goes to the lab school, it is completely reasonable to expect a ${0,1}$ dummy variable. However, we see multiple -1 values and 3 values. Therefore, I will find how many -1 and 3s there are and determine their importance on our data.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 table(working_df$lab)
 cat('the number of non {0,1} values are: ', sum(working_df$lab >1 | working_df$lab <0), '\n')
 cat('the number of {0,1} values are: ', sum(working_df$lab == 1 | working_df$lab == 0), '\n')
@@ -440,7 +435,7 @@ cat(ratio_lab, 'is the percent of all the lab data which contain non {0,1} value
   Because I cannot make sense of these -1 and 3s and would not like to introduce bias into our analysis, I will remove these rows. I recongnize that I am trading off robustness in the data for a more manageable interpretation, but I believe that removing these values (which might get dropped anyways due to the duplicated IDs) will give us a significantly more interpretable result when doing regressions.
 
   Moving onto income bucket, recall from before that we have -99 values in our income data. If this income bucket was created using the income data, then there would be no real point in cleaning this data as it is inherently faulty. If we were to ever use this data, I will create a new income bucket using the original bins. Therefore, I will remove this incorrect data.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   select(-income_bucket)
 ```
@@ -449,16 +444,15 @@ working_df <- working_df %>%
 #### Step 2.3: Dealing with IDs
 
   Now I will deal with the ID column, which will be important because we do not want to double count, assuming each ID should be unique (since we are not dealing with panel data accross time). As mentioned in our data exploration phase, we note that there are duplicates in the data. Based on this understanding of the data, I will do the following:
-  + delete completely identical rows, since they represent double counted data.
-  + delete rows with duplicated ids yet extremely faulty information in one specific category (i.e. for two ID entries, all else the same, one has a -99 in the income category; then delete the one with the -99 in the income category). This is because the non-faulty row contains all the relevant information in these very narrow cases, where as the row which **only** differs with a -99 value will not be useful for our analysis.
-  + to carefully the rows with duplicated ids, but both has very 'believable' data. This is the most tricky part, and I will deal with these on a case-by-case basis should they arise.
+  1. delete completely identical rows, since they represent double counted data.
+  2. delete rows with duplicated ids yet extremely faulty information in one specific category (i.e. for two ID entries, all else the same, one has a -99 in the income category; then delete the one with the -99 in the income category). This is because the non-faulty row contains all the relevant information in these very narrow cases, where as the row which **only** differs with a -99 value will not be useful for our analysis.
+  3. to carefully the rows with duplicated ids, but both has very 'believable' data. This is the most tricky part, and I will deal with these on a case-by-case basis should they arise.
   
-  First, note what we are aiming for, ie, the true count of unique ids:
-```{r}
+  First, note what we are aiming for, ie, the true count of unique ids and proceed with the cleaning.
+```{r,echo=FALSE, warning=FALSE}
 n_distinct(working_df$student_id)
 ```
-
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 #Original: 10,000 obs
 
 #first step, getting rid of complete duplicates
@@ -472,16 +466,16 @@ working_df <- working_df %>%
   filter(was_neg99 == 0)
 #5000 obs, which agrees with our theoretical 'unique' data by student ID
 
-unique(working_df$was_neg99)
+#unique(working_df$was_neg99)
 #returns 0, therefore...
 
 working_df <- working_df %>% 
   select(-was_neg99)
 ```
-  Here, we have identified 3885 completely identical rows (ID or otherwise), and removed them accordingly.
+  While cleaning, we have identified 3885 completely identical rows (ID or otherwise), and removed them accordingly.
 
-  Then, I found all the distinct id-negative_99 pairs. This is to see if we can eliminate the rest of the repeated rows by considering instances where we had garbage data (ie. -99s). As a result, by filtering out garbage data, we were able to directly arrive at our desired state -- where we have all unique IDs! Therefore, I will not need to do the third step in our operation (looking at individual cases), and I am also able to remove the was_neg99 column, since it no longer has any meaning in our analysis (since all rows originally with -99s are gone). Now that we have a dataframe with no duplicate observations, I will now remove columns which do not make sense. Specifically, I will remove all rows which have either -1 or 3 for the lab attendence variable. I realize that there could be interpretion such that the -1s are typos of 1s etc, but I believe that sacrificing these rows so no bias is introduced will be more constructive. 
-```{r}
+  Then, I found all the distinct id-negative_99 pairs. This is to see if we can eliminate the rest of the repeated rows by considering instances where we had garbage data (ie. -99s). As a result, by filtering out garbage data, we were able to directly arrive at our desired state -- where we have all unique IDs! Therefore, I will not need to do the third step in our operation (looking at individual cases), and I am also able to remove the was_neg99 column, since it no longer has any meaning in our analysis (since all rows originally with -99s are gone, and if we keep them, we would just have a column with only one value). Now that we have a dataframe with no duplicate observations, I will now remove columns which do not make sense. Specifically, I will remove all rows which have either -1 or 3 for the lab attendance variable. I realize that there could be the interpretation where the -1s are typos of 1s etc, but I believe that sacrificing these rows so no bias is introduced will be more constructive for the task at hand. 
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- subset(working_df,lab==1|lab==0)
 ```
 From here, I will move forward with Q3.
@@ -492,7 +486,7 @@ From here, I will move forward with Q3.
 #### Step 1: Allocating for robustness check and exploring correlations
   Before doing regressions, lets consider the outliers which might affect the results of estimating the effect on the treatment effect on grades by lab school education. Recall that all the continuous variables which might seek to explain current scores (so: income, distance, past scores) are normally distirbuted. Here, I will cut off the tails of each distribution and save them in a separate dataframe to and run a regression on each to determine the initial results. Then, I will use each resultant regression on the full data set to check for the robustness of the result and interpret from there.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 cutoffs_inc <- quantile(working_df$income,c(0.05,0.95)) 
 cutoffs_dist <- quantile(working_df$dist,c(0.05,0.95))
 cutoffs_pscore <- quantile(working_df$past_score,c(0.05,0.95))
@@ -509,7 +503,7 @@ tiny_pscore_df <- working_df %>%
 
   Now I will use a correlation matrix to check the correlations between each of the continuous variables from each of the tiny dataframes created above. In doing so, I can get a rough idea as to each variables correlate with each other in the cleaned dataframe, and discuss potential regressions from there.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 library(corrplot)
 
 ctn_only_tinyinc <- tiny_inc_df %>% 
@@ -528,11 +522,6 @@ corr_inc <- corrplot.mixed(cor(ctn_only_tinyinc),title = "Tiny Income", mar=c(0,
 corr_dist <- corrplot.mixed(cor(ctn_only_tinydist),title = "Tiny Distance", mar=c(0,0,1,0))
 corr_pscore <- corrplot.mixed(cor(ctn_only_tinypscore),title = "Tiny Past Score", mar=c(0,0,1,0))
 corr_full <- corrplot.mixed(cor(ctn_only_df),title = "Tiny DF", mar=c(0,0,1,0))
-
-corr_dist
-corr_pscore
-corr_inc
-corr_full
 ```
   Notice that each of the tiny dataframes gives very slightly different results. It is quite interesting that removing outliers for any of the aforementioned variables in the dataframe will generally decrease the correlations between the variables. However, this is a trade-off that I believe will be helpful in producing a more concrete analysis because we would not want outliers to skew our results. Furthermore, all variables are positively correlated with each other with varying degrees of correlation, and that past scores are the most highly correlated item with present scores, regardless of the different With everything ready, I will move forward with regressions.
 
@@ -540,7 +529,7 @@ corr_full
 
 #### Step 2.1: Replicating the no-covariate regression with different tinys.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE}
 nocov_reg_inc <- lm(data = tiny_inc_df, score ~ lab)
 nocov_reg_dist <- lm(data = tiny_dist_df, score ~ lab)
 nocov_reg_pscore <- lm(data = tiny_pscore_df, score ~ lab)
@@ -551,19 +540,19 @@ summary(nocov_reg_dist)
 summary(nocov_reg_pscore)
 summary(nocov_reg_fulldf)
 ```
-Here, we have produced 4 regressions, the first three consists of removing outliers of particular variables, where the last is the full clean dataframe. In all of the new regressions, we have much more interpretable and believeable results. Furthermore, it is very interesting that removing outliers in our data (regardless of category), strengthens both the economic significance (larger magnitude of coefficient) as well as statistical significance (p-values) of our regression. However, this regression is effectively saying *"not a single other characteristic of an individual under the current assumptions could explain a variation in the future scores."* However, I do not think it is the case, even with the current valid lottery assumptions. I will move forward with the model with covariates and compare the simple model above with the final model with cerntain covariates.
+Here, we have produced 4 regressions, the first three consists of removing outliers of particular variables, where the last is the full clean dataframe. In all of the new regressions, we have much more interpretable and believeable results relative to those in question 1. It is very interesting that removing outliers in our data (regardless of category), strengthens both the economic significance (larger magnitude of coefficient) as well as statistical significance (p-values) of our regression. However, this regression is effectively saying *"not a single other characteristic of an individual under the current assumptions could explain a variation in the future scores."* However, I do not think it is the case, even with the current valid lottery assumptions. I will move forward with the model with covariates and compare the simple model above with the final model with cerntain covariates.
 
 #### Step 2.2: Replicating the model with covariates
   Now adding more covariates into the model, we must consider what should be the proper variables to consider. I believe the first variable to consider is past scores. This is because of the following reasons:
- + Theoretically, I believe that one's ability to take previous exams should serve as an indication for their ability to take future exams. This is because their overall 'competency' for taking the same exam over time should be more or less consistent, i.e. someone not that great at taking the standardized test wouldn't be an awesome exam taker out of the blue. On the other hand, a great exam taker has no reason to suddenly become terrible with standardized tests. Therefore, not accounting for these situations in our model would skew our conclusion on the effectiveness of attending the lab school.
- + Emperically, the correlation between the two scores are quite high, and this high correlation which indicates how the two columns are interrelated should be taken into account when constructing a model. Else the error term on the regression would be quite high.
+  1. Theoretically, I believe that one's ability to take previous exams should serve as an indication for their ability to take future exams. This is because their overall 'competency' for taking the same exam over time should be more or less consistent, i.e. someone not that great at taking the standardized test wouldn't be an awesome exam taker out of the blue. On the other hand, a great exam taker has no reason to suddenly become terrible with standardized tests. Therefore, not accounting for these situations in our model would skew our conclusion on the effectiveness of attending the lab school.
+  2. Emperically, the correlation between the two scores are quite high, and this high correlation which indicates how the two columns are interrelated should be taken into account when constructing a model. Else the error term on the regression would be quite high.
  
   It should also be noted that I am **not** going to consider (for now) other variables such as distance and income, even though they do show some interesting correlations. This is because I am still following the assumption that the lottery is valid, which results in the following interpretation. Under the valid lottery assumption, there is no reason to believe that income and distance has any affect on current scores for two reasons:
- + There is no reason to believe that somehow living closer to a school, or one's parents having more income, directly explains one's ability to take exams.
- + More critically, one could argue that individuals with higher income or live closer to the school are more likely to get in, and thus we need to control for these variables. However, remember that the current assumption is a valid lottery, which means that regardless of any factor (income, distance etc.) we are assuming that anyone is equally likely to get picked into the lab school. Therefore, while these are valid arguments, it is under under the current assumptions that these controls are currently unnecessary.
+  1. There is no reason to believe that somehow living closer to a school, or one's parents having more income, directly explains one's ability to take exams.
+  2. More critically, one could argue that individuals with higher income or live closer to the school are more likely to get in, and thus we need to control for these variables. However, remember that the current assumption is a valid lottery, which means that regardless of any factor (income, distance etc.) we are assuming that anyone is equally likely to get picked into the lab school. Therefore, while these are valid arguments, it is under under the current assumptions that these controls are currently unnecessary.
  
   With our intuition written, the regression is ran with each of the data frames: The first regression is ran upon the no-outlier distance data, the second on the no-outlier income data, the last on the no-outlier past scores data.
-```{r}
+```{r,echo=FALSE, warning=FALSE}
 reg_inc <- lm(data = tiny_inc_df, score ~ lab + past_score)
 reg_dist <- lm(data = tiny_dist_df, score ~ lab + past_score)
 reg_pscore <- lm(data = tiny_pscore_df, score ~ lab + past_score)
@@ -574,14 +563,19 @@ summary(reg_inc)
 summary(reg_pscore)
 summary(reg_fulldf)
 ```
-  Here we have a slightly different result from before. Between the regressions which control for past scores, we see varying magitudes of the coefficients, standard errors, and statistical significance, but these values all have the same sign, and their magnitudes have small enough differences to where I would believe that they tell the same story: the lab school positively affects exam outcomes by around 0.44~0.48 points. The economic significance will vary by people, (if someone believes that an increase in 0.44~0.48 is necessary for, say college admissions, then it might be economically significant to them), but in general, these values are statistically significant and one could argue for economic significance. After controlling for past scores, we see the coefficient on lab has increased by about 0.3 points while retaining statistical significance, decreasing standard error, and *vastly* increasing the R-squared value (even if it is not exactly a fair comparison between different regressions, it is still worth noting that the R-squared has increaded by a lot). One explaination/interpretation of the regressions above is the following: After controlling for past scores, we are effectively controlling for those individuals who might not excel at exam taking *even if* they attend lab school. In doing so, we are able to make a stronger argument about the actual effectiveness of attending the lab school, and that the lab school is in effect "not to blame" for not being able to increase scores if certain individuals do not excel at exam taking. In fact, one could interpret the regression as that one's previous scores matters much more when looking at future scores, and the lab school might not be that economically significant after all (but people will have different arguments). For the aformentioned reasons, I believe that the second regression type (controlling for past scores), is more economically interpretable under the valid lottery assumption, which shows a small, positive effect of attending lab school on future scores.
+  Here we have a slightly different result from before. Between the regressions which control for past scores, we see varying magnitudes of the coefficients, standard errors, and statistical significance, but these values all have the same sign, and their magnitudes have small enough differences to where I would believe that they tell the same story: the lab school positively affects exam outcomes by around 0.57 to 0.61 points. The economic significance will vary by people, (if someone believes that an increase in 0.57 to 0.61 is necessary for, say college admissions, then it might be economically significant to them), but in general, these values are statistically significant and one could argue for economic significance. 
+  
+  After controlling for past scores, we see the coefficient on lab has increased by about 0.3 points while retaining statistical significance, decreasing standard error, and *vastly* increasing the R-squared value (even if it is not exactly a fair comparison between different regressions, it is still worth noting that the R-squared has increased by a lot). 
+  
+  One explaination/interpretation of the regressions above is the following: After controlling for past scores, we are effectively controlling for those individuals who might not excel at exam taking *even if* they attend lab school. In doing so, we are able to make a stronger argument about the actual effectiveness of attending the lab school, and that the lab school is in effect "not to blame" for not being able to increase scores if certain individuals do not excel at exam taking. In fact, one could interpret the regression as that one's previous scores matters much more when looking at future scores, and the lab school might not be that economically significant after all (but people will have different arguments). For the aforementioned reasons, I believe that the second regression type (controlling for past scores), is more economically interpretable under the valid lottery assumption, which shows a small, positive effect of attending lab school on future scores.
 
-###Q4: Professor Levitt sometimes makes mistakes. What evidence would you present to convince him that acceptance to LLS is not determined by a valid lottery?
+### Question 4: 
+Professor Levitt sometimes makes mistakes. What evidence would you present to convince him that acceptance to LLS is not determined by a valid lottery?
 
   Notice that every analysis above is made under the assumption that the lottery is valid, and I have gone to great lengths at reinforcing that the previous kind of thinking only works under the valid lottery assumption. Now I seek to use simple visualizations in the raw data to show that the lottery is indeed invalid.
 
   First off, I will operate on the definition that a "valid lottery" means "a random sampling of the population", where every single individual in the population has equal chance of being selected by said lottery. If that is indeed the case, I would expect that individuals' characteristics who go to lab school to be extremely similar to those who do not go to lab school, and that their only difference is lab school attendence. However, notice the following graphs: These are comparison between past scores, income, distance from the school of those who attend the lab school and those who don't. For each graphic, I used the full clean data as well as the corresponding tiny data to that variable. 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE,result=FALSE, fig.show="hold", out.width="33%"}
 lab_df <- working_df %>% 
   filter(lab==1)
 
@@ -605,21 +599,22 @@ lab_income_distr <- lab_comb %>%
   geom_density(alpha=0.4) +
   ggtitle("Distribution of income between lab school students and non students")
 
+
+lab_income_distr
 lab_pscore_distr
 lab_dist_distr
-lab_income_distr
-
-ggarrange(lab_pscore_distr,lab_dist_distr,lab_income_distr,
-          align="v")
-
+```
+  Here, we see that the visual analysis tells us that there is indeed characteristic difference between lab students and non-lab students. In particular, the most significant aspect of this uneven characteristic distribution is the distance. We see a sharp spike of individuals who live very close to lab relative to those who do not go to lab. If this is indeed a valid lottery, this discrepancy should never occur. Therefore, even just looking at distance shows a characteristic difference between those who go to lab and those who don't. Of course, it is also worth noting that the distributions of past scores and income are slightly different, but distance is nevertheless the most significant issue at hand. Conducting T-tests, we see that the difference between those who go to lab and those who don't is significant for all three continuous variables. (Check code for the actual tests.)
+  
+```{r,echo=FALSE, warning=FALSE, results=FALSE}
 t.test(data=working_df,past_score ~ lab)
 t.test(data=working_df,income ~ lab)
 t.test(data=working_df,dist ~ lab)
 ```
-  Here, we see that the visual analysis tells us that there is indeed characteristic difference between lab students and non-lab students. In particular, the most significant aspect of this uneven characteristic distribution is the distance. We see a sharp spike of individuals who live very close to lab relative to those who do not go to lab. If this is indeed a valid lottery, this discrepancy should never occur. Therefore, even just looking at distance shows a characteristic difference between those who go to lab and those who don't. Of course, it is also worth noting that the distributions of past scores and income are slightly different, but distance is nevertheless the most significant issue at hand. Conducting T-tests, we see that the difference between those who go to lab and those who dont is significant for all three continuous variables.
+
 
   More over, we can look at the distributions of categorical data. I will seek to show that there is indeed difference between the characteristics of those who go to lab school and those who don't. I will use bar graphs to indicate this difference. Specifically, we would expect that, under a valid lottery, that there should be no disproportionate data (i.e. a certain ethnicity or gender is disproportionately more likely to attend lab school relative to their proportion in the population). This will be indicated by a split in a single bar: if it was a valid lottery, then the bar should split equally, otherwise, it will be a description of disproportional data between the two groups. To note, the bars highlighted in turqoise represents the individuals that goes to lab school.
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 lab_gender_distr <- working_df %>% 
   ggplot(aes(x=as.factor(lab),fill=as.factor(gender))) +
   geom_bar(alpha=0.4) +
@@ -656,16 +651,16 @@ lab_sports_distr <- working_df %>%
 ggarrange(lab_gender_distr, lab_race_distr)
 lab_sports_distr
 ```
-  Amongst the categorical variables, it seems that gender does not contain significant disproportionate data, and sports show small discrepencies. However, race data  does show some discrepancy between those who do enter lab school and those who don't. In particular, individuals labeled "H" and "W" are proportionally less likely to be attending lab, where as individuals labeled "B" are more likely to be attending lab. Therefore, it is shown visually that there is discrepancy between the two groups, and thus on the level of the categorical data, it seems that race data goes against our intuition of a "valid lottery". As a result there must be some implicit bias which is causing this discrepancy: it could be a policy which favors those who live closer to lab.
+  Among the categorical variables, it seems that gender does not contain significant disproportionate data, and sports show small discrepancies. However, race data does show some discrepancy between those who do enter lab school and those who don't. In particular, individuals labeled "H" and "W" are proportionally less likely to be attending lab, where as individuals labeled "B" are more likely to be attending lab. Therefore, it is shown visually that there is discrepancy between the two groups, and thus on the level of the categorical data, it seems that race data goes against our intuition of a "valid lottery". As a result there must be some implicit bias which is causing this discrepancy: it could be a policy which favors those who live closer to lab.
 
   Combining the analyses above, we see that the so called "valid lottery" seems to have a bias towards individuals who live close to the school. If we set the definition of "valid lottery" as a "random sampling" of the population, then this evidence goes against the definitions, which indicates that the "valid lottery" is not exactly valid after all.
 
-###Question 5: 
+### Question 5: 
   Now explain how you think students actually get into the school, based on your analysis of the data. Assuming your hypothesis is correct, is it possible to estimate a causal impact of attending the school on test scores? Do your best providing an estimate and standard error. 
 
-  Following directly what we have found in Question 4, I will move forward to argue that distance might serve to point at a causal relation between the effectiveness of lab education on exam scores. First off, I would like to follow up from Q4: judging by the distribution on distance between those who attend and those who do not attend the lab school, I believe  what is really happening is that the so called 'valid lottery' is conducted with a kind of bias involved. To that note, It would be helpful check the characteristic of individuals who live close to the school vs those who live far. Here, I will present some figures which outline the different characteristics of individuals as we move further away from the lab school. This is to show that distance does indeed outline different characteristics, and thus identity what variables we want to control for in our regression. 
+  Following directly what we have found in Question 4, I will move forward to argue that distance might serve to point at a causal relation between the effectiveness of lab education on exam scores. First off, I would like to follow up from Q4: judging by the distribution on distance between those who attend and those who do not attend the lab school, I believe  what is really happening is that the so called 'valid lottery' is conducted with a kind of bias involved. To that note, It would be helpful check the characteristic of individuals who live close to the school vs those who live far. Here, I will present some figures which outline the different characteristics of individuals as we move further away from the lab school. This is to show that distance does indeed outline different characteristics, and thus identity what variables we want to control for in our regression. First, I will bin past and current scores as well as re-bin the cleaned income variable into 5 bins (20th,40th,60th,80th percentiles as cutoffs respectively). Then, I will directly show the graphs which outline the varying characteristics of individuals as we move further away from the lab school. This will aim to highlight certain characteristics as being associated with distance to the school.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 test_df <- working_df %>% 
   mutate(pscore_bins = ntile(working_df$past_score,5)) %>% 
   mutate(income_bins = ntile(working_df$income,5)) %>% 
@@ -707,7 +702,7 @@ cf_sport <- working_df %>%
 cf_income <- test_df %>% 
   ggplot(aes(x=dist,fill=as.factor(income_bins))) +
   geom_density(alpha=0.3) +
-  ggtitle("Income by distance to school (50th percentile)") +
+  ggtitle("Income by distance to school") +
   theme(legend.position="bottom",
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
@@ -718,7 +713,7 @@ cf_income <- test_df %>%
 cf_pscore <- test_df %>% 
   ggplot(aes(x=dist,fill=as.factor(pscore_bins))) +
   geom_density(alpha=0.3) +
-  ggtitle("Past scores by distance to school (50th percentile)") +
+  ggtitle("Past scores by distance to school") +
   theme(legend.position="bottom",
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
@@ -729,7 +724,7 @@ cf_pscore <- test_df %>%
 cf_score <- test_df %>% 
   ggplot(aes(x=dist,fill=as.factor(score_bins))) +
   geom_density(alpha=0.3) +
-  ggtitle("Scores by distance to school (50th percentile)") +
+  ggtitle("Scores by distance to school") +
   theme(legend.position="bottom",
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
@@ -747,9 +742,9 @@ ggarrange(cf_score,cf_pscore,ncol=2,nrow=1)
 ggarrange(cf_gender,cf_sport,ncol=2,nrow=1)
 cf_lab
 ```
-  From the graphs, we see that income, race, and past scores all vary as we move further away from the lab school. However, gender and sports participation does not vary with closeness to the school. All being said, we may want to use these variables which have significant difference as a method to control for how the school actually impacts scores. But first, I would like to make a new variable called "closeness", defined by "(dist - max)/(max - min)". I recognize this is a normalization process, and requires new interpretations of the coefficients. However, since those who live close to the school generally go to the school, I believe that this is a more intuitive measure of how distance may play a role in determining whether someone attends lab or not.
+  From the graphs, we see that income, race, and past scores all vary as we move further away from the lab school. However, gender and sports participation does not vary with closeness to the school. All being said, we may want to use these variables which have significant difference as a method to control for how the school actually impacts scores. But first, I would like to make a new variable called "closeness", defined by $\frac{max-dist_i}{max - min}$, where $i$ represents a single observation. I recognize this is a normalization process, and requires new interpretations of the coefficients. However, since those who live close to the school generally go to the school, I believe that this is a more intuitive measure of how distance may play a role in determining whether someone attends lab or not.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 working_df <- working_df %>% 
   mutate(closeness = (max(dist) - dist)/(max(dist)-min(dist)))
 
@@ -762,31 +757,15 @@ tiny_inc_df<- tiny_inc_df %>%
 tiny_pscore_df <- tiny_pscore_df %>% 
   mutate(closeness = (max(dist) - dist)/(max(dist)-min(dist)))
 ```
-
   Now we will use this to describe how closeness to the school may serve as a way to understand the causal effectiveness of attending lab school. In particular, there is no reason to believe that living close to the lab school has a direct effect on one's ability to improve their exam scores. Furthermore, unlike variables such as income, which may be used to improve one's score by purchasing tutoring services, distance to a school does not have such a characteristic where it can vary one's testing improvement level other than attending the school itself. 
   Of course, one could validly argue that we could have confounding factors if there is a school that is far from the lab school that excels at improving standardized test scores, and thus being further from the school might also have a positive effect on grades. However that would be extremely difficult to argue for. Intuitively, this is because distance is a radius measure: unless somehow the lab school is surrounded (concentrically) by other prep-schools, it is not necessarily the case that distance inherently contains structural flaws for it to be a instrument of measurement. One could also argue that variables such as income might be the determining factor rather than distance. However, as mentioned previously, income might affect scores through other means, where as distance does not inherently have the direct effect on scores.
   Furthermore, we have also identified that income, past_scores, and race could have interactions with distance which skew our final regression result. Therefore, I will add these as a control to control for the variation due to this characteristic. With all that said, I will now measure how closeness to the school can affect one's scores through attending lab school. 
   In a word: individuals closer to the school tend to enroll in the school more often due to the bias in the lottery, but this distance to a school might not otherwise affect one's ability to improve test scores. Therefore distance, once controlled for, should be a good instrument for measuring the true effectiveness of attending the lab school.
 
-  Now to actually run the regression with our proposed instrument on each of the tiny data frames (outliers removed). The first regression is ran upon the no-outlier distance data, the second on the no-outlier income data, the last on the no-outlier past scores data.
+  Now to actually run the regression with our proposed instrument on each of the tiny data frames (outliers removed). The first regression is ran upon the no-outlier distance data, the second on the no-outlier income data, the last on the no-outlier past scores data. (see code for all regressions)
 
-```{r}
+```{r,include=FALSE}
 library(ivreg)
-
-# reg_closeness_nocon <- lm(data=working_df, score ~ closeness)
-# 
-# reg_aug0 <- lm(data=working_df, score ~ closeness + past_score) #+past score
-# 
-# reg_aug0_ctrl <- lm(data=working_df, score ~ closeness + past_score + as.factor(race)) #+race
-# 
-# reg_aug1 <- lm(data=working_df, score ~ closeness + past_score + income + as.factor(race)) #+income, +past score
-
-#reg_aug_tolab <- lm(data=working_df, lab ~ closeness + past_score + income + as.factor(race)) #interpret as the probability of attending lab
-
-# summary(reg_closeness_nocon)
-# summary(reg_aug0) summary(reg_aug0_ctrl)
-# summary(reg_aug1)
-#summary(reg_aug_tolab)
 
 m_iv1 <- ivreg(data=tiny_dist_df, score ~ lab + past_score + income + as.factor(race) | closeness + past_score + income + as.factor(race))
 
@@ -798,9 +777,9 @@ summary(m_iv1)
 summary(m_iv2)
 summary(m_iv3)
 ```
-Taking the regression above, the true significance of attending the lab school is reported in each of the regressions without outliers. Amongst all three, we see that the value ranges between ${0.327}$ to ${0.386}$, and each report a standard error ranging between ${0.14}$ to ${0.16}$. Now that we have this foundation to build upon, I will run the regression with our full data frame to check for the robustness of these results once we include all the outliers.
+Summarizing the regressions above, the true significance of attending the lab school is reported in each of the regressions without outliers. Amongst all three, we see that the value ranges between ${0.327}$ to ${0.386}$, and each report a standard error ranging between ${0.14}$ to ${0.16}$. Now that we have this foundation to build upon, I will run the regression with our full data frame to check for the robustness of these results once we include all the outliers.
 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE}
 reg_iv <- ivreg(data=working_df, score ~ lab + past_score + income + as.factor(race) | closeness + past_score + income + as.factor(race))
 
 summary(reg_iv)
@@ -808,13 +787,13 @@ summary(reg_iv)
 
   Notice then that even when we include outliers, the results (in terms of coefficient and statistical significance) are still very close to what we had when we had removed such outliers. Notice that this is indeed a (relatively) strong instrument statistically as well, as noted by the Weak Instruments test. Since we have argued that distance (or closeness) is a strong instrument economically, and that this also holds statistically, I believe this is representative and the true effect of attending the lab school.
 
-  Therefore, using the robust results, I conclude that the true effectiveness of attending the lab school is (Using the IV) an increase by 0.332 points to one's standardized test score with a standard error of 0.139, and his result is significant to the 0.0172 percentile.
+  Therefore, using the robust results, I conclude that the **true effectiveness of attending the lab school is (Using the IV) an increase by 0.332** points to one's standardized test score with a **standard error of 0.139**, and his result is **significant to the 0.0172 percentile.**
 
-### Q6:
+### Question 6:
   The same data set can be used for multiple purposes. Instead of estimating the treatment effect of LLS, suppose we want to know about the community/location surrounding LLS. What can you tell us? Be as specific as possible.
 
   After our analysis in part 4 and part 5, we have found multiple descriptive items that one maybe interested in while using this data set. 
-```{r}
+```{r,echo=FALSE, warning=FALSE,message=FALSE, fig.show="hold", out.width="50%"}
 ggarrange(cf_income,cf_race,ncol=2,nrow=1)
 ggarrange(cf_score,cf_pscore,ncol=2,nrow=1)
 ggarrange(cf_gender,cf_sport,ncol=2,nrow=1)
