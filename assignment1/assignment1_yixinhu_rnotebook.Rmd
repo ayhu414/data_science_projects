@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "ECON 21300 Assignment 1, Yixin Hu"
 output: html_notebook
 ---
 
@@ -21,11 +21,6 @@ library(stringr)
 library(ggpubr)
 
 raw_data <- read_csv("assignment1_data.csv")
-
-print("Glimps of the dataframe 'raw_data'")
-glimpse(raw_data)
-print("Descriptive Statistics for 'raw_data'")
-summary(raw_data)
 ```
 
 Note that there are multiple items that jumps out, (take the -99 min income for example). While we should usually take a more detailed look at the data as well as clean the data *before* doing any regressions, we will follow the direction of the question and reserve these processes to the next question (Question 2).
@@ -607,10 +602,12 @@ lab_income_distr <- lab_comb %>%
 lab_pscore_distr
 lab_dist_distr
 lab_income_distr
-```
-Here, we see that the visual analysis tells us that there is indeed characteristic difference between lab students and non-lab students. In particular, the most significant aspect of this uneven characteristic distribution is the distance. We see a sharp spike of individuals who live very close to lab relative to those who do not go to lab. If this is indeed a valid lottery, this discrepency should never occur. Therefore, even just looking at distance shows a characteristic difference between those who go to lab and those who don't. Of course, it is also worth noting that the distributions of past scores and income are slightly different, but distance is nevertheless the most significant issue at hand.
 
-More over, we can look at the distributions of categorical data. I will seek to show that there is indeed difference between the charactoristics of those who go to lab school and those who don't. I will use bargraphs to indicate this difference. Specifically, we would expect that, under a valid lottery, that there should be no disproportionate data (i.e. a certain ethnicity or gender is disproportionately more likely to attend lab school relative to their proportion in the population). This will be indicated by a split in a single bar: if it was a valid lottery, then the bar should split equally, otherwise, it will be a description of disportportional data between the two groups. To note, the bars highlighted in red represents the individuals that goes to lab school.
+t.test(lab ~ dist)
+```
+Here, we see that the visual analysis tells us that there is indeed characteristic difference between lab students and non-lab students. In particular, the most significant aspect of this uneven characteristic distribution is the distance. We see a sharp spike of individuals who live very close to lab relative to those who do not go to lab. If this is indeed a valid lottery, this discrepancy should never occur. Therefore, even just looking at distance shows a characteristic difference between those who go to lab and those who don't. Of course, it is also worth noting that the distributions of past scores and income are slightly different, but distance is nevertheless the most significant issue at hand.
+
+More over, we can look at the distributions of categorical data. I will seek to show that there is indeed difference between the characteristics of those who go to lab school and those who don't. I will use bar graphs to indicate this difference. Specifically, we would expect that, under a valid lottery, that there should be no disproportionate data (i.e. a certain ethnicity or gender is disproportionately more likely to attend lab school relative to their proportion in the population). This will be indicated by a split in a single bar: if it was a valid lottery, then the bar should split equally, otherwise, it will be a description of disportportional data between the two groups. To note, the bars highlighted in red represents the individuals that goes to lab school.
 ```{r}
 lab_gender_distr <- lab_comb %>% 
   ggplot(aes(x=as.factor(gender))) +
@@ -635,14 +632,14 @@ lab_gender_distr
 lab_race_distr
 lab_sports_distr
 ```
-Amongst the categorical variables, it seems that gender does not contain significant disproportionate data, and sports show small discrepencies. However, race data  does show some discrepancy between those who do enter lab school and those who don't. In particular, individuals labeled "H" and "W" are proportionally less likely to be attending lab, where as individuals labeled "B" are more likely to be attending lab. Therefore, it is shown visually that there is descrepency between the two groups, and thus on the level of the categorical data, it seems that race data goes against our intuition of a "valid lottery".
+Amongst the categorical variables, it seems that gender does not contain significant disproportionate data, and sports show small discrepencies. However, race data  does show some discrepancy between those who do enter lab school and those who don't. In particular, individuals labeled "H" and "W" are proportionally less likely to be attending lab, where as individuals labeled "B" are more likely to be attending lab. Therefore, it is shown visually that there is discrepancy between the two groups, and thus on the level of the categorical data, it seems that race data goes against our intuition of a "valid lottery".
 
 Combining the analyses above, we see that the so called "valid lottery" seems to have a bias towards individuals who live close to the school and those labeled "B". If we set the definition of "valid lottery" as a "random sampling" of the population, then this evidence goes against the definitions, which indicates that the "valid lottery" is not exactly valid after all.
 
 ###Question 5: 
 Now explain how you think students actually get into the school, based on your analysis of the data. Assuming your hypothesis is correct, is it possible to estimate a causal impact of attending the school on test scores? Do your best providing an estimate and standard error. 
 
-Following directly what we have found in Question 4, I will move forward to argue that distance might serve to point at a causal relation between the effectiveness of lab education on exam scores. First off, I would like to follow up from Q4: judging by the distribution on distance between those who attend and those who do not attend the lab school, I believe  what is really happening is that the so called 'valid lottery' is conducted with a kind of self-selction bias involved: *those who are close to the school might be more likely to put their names into the lottery, and vice versa with those who are far.* To that note, It would be helpful check the characteristic of individuals who live close to the school vs those who live far. Here, I will segment the entire population at hand into those living "close" and those living "far", this cutoff will be motivated by the visual peak indicated by the distance data. Specifically, I will segment the data based on the 50% percentile of individuals's distance to the school. 
+Following directly what we have found in Question 4, I will move forward to argue that distance might serve to point at a causal relation between the effectiveness of lab education on exam scores. First off, I would like to follow up from Q4: judging by the distribution on distance between those who attend and those who do not attend the lab school, I believe  what is really happening is that the so called 'valid lottery' is conducted with a kind of bias involved: *those who are close to the school might be more likely to put their names into the lottery, and vice versa with those who are far.* To that note, It would be helpful check the characteristic of individuals who live close to the school vs those who live far. Here, I will segment the entire population at hand into those living "close" and those living "far", this cutoff will be motivated by the visual peak indicated by the distance data. Specifically, I will segment the data based on the 50% percentile of individual's distance to the school. 
 
 ```{r}
 distance_cutoff <- quantile(working_df$dist,0.5) 
@@ -655,63 +652,75 @@ far_df <- working_df %>%
 
 dist_comb <- rbind(close_df,far_df)
 
-close_df %>% 
+c_race <- close_df %>% 
   ggplot(aes(x=race)) +
   geom_bar() + 
   ggtitle("Close to school ethic distributions")
 
-far_df %>% 
+f_race <-far_df %>% 
   ggplot(aes(x=race)) +
   geom_bar() + 
   ggtitle("Far from school ethic distributions")
 
-close_df %>% 
+c_gender <- close_df %>% 
   ggplot(aes(x=gender)) +
   geom_bar() + 
   ggtitle("Close to school gender distributions")
 
-far_df %>% 
+f_gender <- far_df %>% 
   ggplot(aes(x=gender)) +
   geom_bar() + 
   ggtitle("Far from school gender distributions")
 
-close_df %>% 
+c_sport <- close_df %>% 
   ggplot(aes(x=plays_sports)) +
   geom_bar() + 
   ggtitle("Close to school sports distributions")
 
-far_df %>% 
+f_sport <- far_df %>% 
   ggplot(aes(x=plays_sports)) +
   geom_bar() + 
   ggtitle("Far from school sports distributions")
 
 cf_income <- dist_comb %>% 
   ggplot(aes(x=income)) +
-  geom_histogram(data=close_df,color="blue") +
-  geom_histogram(data=far_df,color="red")
+  geom_density(data=close_df,fill="blue",alpha=0.6) +
+  geom_density(data=far_df,fill="red",alpha=0.6) +
+  ggtitle("Income by distance to school (50th percentile)")
 
 cf_pscore <- dist_comb %>% 
   ggplot(aes(x=past_score)) +
-  geom_histogram(data=close_df,color="blue") +
-  geom_histogram(data=far_df,color="red")
+  geom_density(data=close_df,fill="blue",alpha=0.6) +
+  geom_density(data=far_df,fill="red",alpha=0.6) +
+  ggtitle("Past scores by distance to school (50th percentile)")
 
+cf_score <- dist_comb %>% 
+  ggplot(aes(x=score)) +
+  geom_density(data=close_df,fill="blue",alpha=0.6) +
+  geom_density(data=far_df,fill="red",alpha=0.6) +
+  ggtitle("Past scores by distance to school (50th percentile)")
+
+c_lab <- close_df %>% 
+  ggplot(aes(x=lab)) +
+  geom_bar() + 
+  ggtitle("Close to school lab attendance distributions (50th percentile)")
+
+f_lab <- far_df %>% 
+  ggplot(aes(x=lab)) +
+  geom_bar() + 
+  ggtitle("Far from school lab attendance distributions (50th percentile)")
+
+c_race
+c_gender
+c_sport
+f_race
+f_gender
+f_sport
+c_lab
+f_lab
 cf_income
 cf_pscore
-
-close_df %>% 
-  ggplot(aes(x=income)) +
-  geom_histogram() + 
-  ggtitle("Close to school income distributions")
-
-far_df %>% 
-  ggplot(aes(x=income)) +
-  geom_histogram() + 
-  ggtitle("Far from school income distributions")
-
-
-working_df %>% 
-  ggplot(aes(x=dist)) +
-  geom_density()
+cf_score
 ```
 From the two graphs, we see that "H" is more or less consistent between the two categories of "close" and "far". However, more interesting is the other ethnic compositions, where "B" is more concentrated near the school, and "W" and "A" is proportionally concentrated far from the school. Furthermore, we see that those who live "close" to the school is more likely to have a lower income relative to those who live "far", and those who live "close" also tend to have lower scores than those who live "far". This is interesting as we have previously identified that ethnicity and distance are quite different between those who attend the school and those who don't. However, gender and sports participation does not vary with closeness to the school. All being said, we may want to use these variables which have significant difference as a method to control for how the school actually impacts scores. But first, I would like to make a new variable called "closeness", defined by "(dist - max)/(max - min)". I recognize this is a normalization process, and requires new interpretions of the coefficients. However, since those who live close to the school generally go to the school, I believe that this is a more intuitive measure of how distance may play a role in determining whether someone attends lab or not.
 
@@ -720,19 +729,34 @@ working_df <- working_df %>%
   mutate(closeness = (max(dist) - dist)/(max(dist)-min(dist)))
 ```
 
-As seen from above, they are effectively inverses of each other when looked at from a density stand point. Now we will use this to describe how closeness to the school may serve as a way to understand the causal effectiveness of attending lab school. In particular, there is no reason to believe that living close to the lab school has a direct effect on one's ability to improve their exam scores. Furthermore, unlike income, which may be used to improve one's score by purchasing tutoring services, distance to a school does not have such a characteristic where it can vary one's testing improvement level other than attending the school itself. Of course, one could say that we could have confounding factors if there is a school that is far from the lab school that excels at improving standardized test scores, and thus being further from the school might also have a positive effect on grades. However that would be extremely difficult to argue for. Intuitively, this is because distance is a radius measure: unless somehow the lab school is surrounded (concentrically) by other prep-schools, it is not necessarily the case that distance inherently contains structural flaws for it to be a instrument of measurement. Furthermore, we have also identified that distance and race could have interactions which skew our final regression result. Therefore, I will add race as a control to control for the variation due to this characteristic. With all that said, I will now measure how closeness to the school can affect one's scores through attending lab school. Since we have identified past scores, income, and race as the key differences in distance, I will control for these effects as we move on. In a word: individuals closer to the school tend to enroll in the school more often, but this distance to a school might not otherwise affect one's ability to improve test scores. Therefore distance, once controlled for, should be a good instrument for measuring the true effectiveness of attending the lab school.
+As seen from above, they are effectively inverses of each other when looked at from a density stand point. Now we will use this to describe how closeness to the school may serve as a way to understand the causal effectiveness of attending lab school. In particular, there is no reason to believe that living close to the lab school has a direct effect on one's ability to improve their exam scores. Furthermore, unlike income, which may be used to improve one's score by purchasing tutoring services, distance to a school does not have such a characteristic where it can vary one's testing improvement level other than attending the school itself. Of course, one could say that we could have confounding factors if there is a school that is far from the lab school that excels at improving standardized test scores, and thus being further from the school might also have a positive effect on grades. However that would be extremely difficult to argue for. Intuitively, this is because distance is a radius measure: unless somehow the lab school is surrounded (concentrically) by other prep-schools, it is not necessarily the case that distance inherently contains structural flaws for it to be a instrument of measurement. Furthermore, we have also identified that distance and race could have interactions which skew our final regression result. Therefore, I will add race as a control to control for the variation due to this characteristic. With all that said, I will now measure how closeness to the school can affect one's scores through attending lab school. Since we have identified past scores, income, and race as the key differences in distance, I will control for these effects as we move on. In a word: individuals closer to the school tend to enroll in the school more often due to the bias in the lottery, but this distance to a school might not otherwise affect one's ability to improve test scores. Therefore distance, once controlled for, should be a good instrument for measuring the true effectiveness of attending the lab school. Furthermore, we are capturing the exogenaity 
 
 ```{r}
-reg_dist_cause <- lm(data=working_df, score ~ closeness + past_score + as.factor(race))
+library(ivreg)
 
-reg_aug1 <- lm(data=working_df, score ~ closeness + past_score + income + as.factor(race)) #+income
+reg_closeness_nocon <- lm(data=working_df, score ~ closeness)
 
-reg_aug2 <- lm(data=working_df, lab ~ closeness + past_score + income + as.factor(race)) #interpret as the probability of attending lab
+reg_aug0 <- lm(data=working_df, score ~ closeness + past_score) #+past score
 
-summary(reg_dist_cause)
+reg_aug0_ctrl <- lm(data=working_df, score ~ closeness + past_score + as.factor(race)) #+race
+
+reg_aug1 <- lm(data=working_df, score ~ closeness + past_score + income + as.factor(race)) #+income, +past score
+
+reg_aug_tolab <- lm(data=working_df, lab ~ closeness + past_score + income + as.factor(race)) #interpret as the probability of attending lab
+
+summary(reg_closeness_nocon)
+summary(reg_aug0)
+summary(reg_aug0_ctrl)
 summary(reg_aug1)
-summary(reg_aug2)
+summary(reg_aug_tolab)
+
+m_iv <- ivreg(data=working_df, score ~ lab + past_score + income + as.factor(race) | closeness + past_score + income + as.factor(race))
+
+summary(m_iv)
 ```
-Taking the regression coefficients of aug1 and aug2, as well as the argument provided above, I conclude that the true effectiveness of attending the lab school is (Using the IV formula) $\hat{\beta}_{True} = \frac{\hat\beta^{score}_{closeness}}{\hat\beta^{lab}_{closeness}} = \frac{0.362}{1.101}=0.357$, where the standard error on $\hat\beta^{score}_{closeness}$ is $0.145$ and the standard error on $\hat\beta^{lab}_{closeness}$ is $0.061$. 
+Taking the regression coefficients of aug1 and aug2, as well as the argument provided above, I conclude that the true effectiveness of attending the lab school is (Using the IV formula) $\hat{\beta}_{IV} = \frac{\hat\beta^{score}_{closeness}}{\hat\beta^{lab}_{closeness}} = \frac{0.362}{1.101}=0.357$, where the standard error on $\hat\beta^{score}_{closeness}$ is $0.145$ and the standard error on $\hat\beta^{lab}_{closeness}$ is $0.061$. This is to say, attending the lab school, everything else considered, can help you increase $0.357$ points on your standardized exam.
 
+### Q6:
+The same data set can be used for multiple purposes. Instead of estimating the treatment effect of LLS, suppose we want to know about the community/location surrounding LLS. What can you tell us? Be as specific as possible.
 
+After our analysis in part 4 and part 5, we have found multiple descriptive items that one maybe interested in while using this data set. In particular, we find that individuals who live close to the lab school are much more likely (in proportions) to attend the lab school relative to those who live far. Furthermore, we find that those who live close the lab school, on average and relative to those who live far, have less standardized testing scores (past and present), less income, and more likely to be of the ethnic group "B" and less likely to be ethnic group "W" and "A", where as they are equally likely to be of ethnic group "H". These are all very interesting findings, suggesting that the community around the lab school might have quite different composition relative to the rest population. Therefore, these characteristics of the surrounding community around the lab school may serve as motivation (not necessarily justification) for policy prescriptions for investigation in the future. 
