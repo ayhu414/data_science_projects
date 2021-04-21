@@ -8,11 +8,31 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
 ```{r}
-plot(cars)
+library(tidyverse)
+library(ggplot2)
+library(stringr)
+
+raw_df <- read.csv("traffic_data.csv")
+
+cleaned_df <- raw_df %>% 
+  rename_at(vars(ends_with('.1')), ~ str_replace(., '.1$', '_per_mil')) %>% 
+  rename_at(vars(starts_with('X')), ~ str_remove(.,'X'))
+
+per_mil_df <- cleaned_df %>% 
+  select("State", ends_with("_per_mil"))
+
+total_df <- cleaned_df %>% 
+  select("State", !ends_with("_per_mil"), -Difference..1994....2018)
+
+long_per_mil <- per_mil_df %>% 
+  rename_at(vars(ends_with('_per_mil')), ~ str_remove(.,'_per_mil')) %>% 
+  gather(key = "year", value = "death_per_mil",c(-State)) %>% 
+  mutate(year = as.Date(year, format = "%Y"))
+
+long_per_mil %>% 
+  ggplot(aes(x=year,y=death_per_mil)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle=60,hjust=1)) +
+  geom_smooth(method = "lm")
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
