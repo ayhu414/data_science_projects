@@ -3,14 +3,82 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+## Question 1:
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+Theorize on a variety of possible causal channels via which marijuana legalization might lead to more or fewer driving fatalities. For each causal channel, guesstimate a plausible sign and magnitude of the impact of the channel. Obviously, you are just speculating here using common sense and back of the envelope calculations. 
+
+### Response:
+
+There are many possible causal channels which marijuana legalization might influence driving fatalities, I will outline some speculations and justify these ideas here without diving into data:
+
+### Direct influence on a 'latent' cohort:
+
+Pathway: Legalization of marijuana -> Readily available marijuana access -> increased consumption in the population directly -> more individuals with more frequent impaired coordination due to increased blood THC levels -> increased traffic accidents
+
+Here, I am assuming that there is a 'latent' group of individuals (such as teens) in the population who wish to try marijuana and are simply waiting for the legalization to consume marijuana. Without change of any other cohorts, this cohort will begin to consume marijuana at the earliest possible opportunity. According to the CDC report in 2017, marijuana has effects on the consumer. In particular, the drug can "impair coordination, distort perception, and lead to memory loss and difficult in problem solving" (CDC, https://www.cdc.gov/marijuana/pdf/marijuana-driving-508.pdf). This shows that marijuana does have a negative effect on one's ability to drive safely. If our pathway indicated above is valid, then that means that individuals form this 'latent' group will have impaired coordination more frequently, and thus increase traffic accidents.
+
+In the same report, it is mentioned that marijuana use in nighttime, weekend drivers have increased by 4% (CDC) from 2007 to 2017. Therefore, if we are to estimate the plausible sign and magnitude of this channel, I suspect that from this time period that I will **see a positive sign on the coefficient by a magnitude of around 4%, assuming the effects are strong enough to cause an accident in most situations.** 
+
+### Interaction with other substances (subsitutes):
+
+Pathway: Legalization of marijuana -> Readily available marijuana access -> increased marijuana consumption in the population and decreased alcohol consumption -> individuals who make the switch are less impaired compared to consuming alchohol -> decreased traffic accidents
+
+According to a study by Sewell et al. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2722956/), while marijuana does have negative effects on cognitive ability, the effect of marijuana "vary more between individuals tan they do with alcohol", and marijuana's effect is "more pronounced with highly automatic driving functions than with more complex tasks that require conscious control, whereas with alcohol produces an opposite pattern of impairment"(Sewell et al.). If we take driving as a task that "require conscious control", then marijuana might not have as strong of an effect compared to alcohol. Indeed, the study mentions that "[b]ecause of both [the aforementioned points] and an increased awareness that they are impaired, marijuana smokers tend to compensate effectively while driving by utilizing a variety of behavioral strategies."(Sewell et al.). Therefore, if the portion of the population who used to consume alcohol switched over to marijuana, then the total amount of alcohol consumers may decrease. Combine this with findings by Sewell et al., it could be that decreasing driving under alcohol's influence with driving under THC's influence may decrease total traffic accident fatalities due to better control when consuming marijuana compared to alcohol.
+
+Therefore, I suspect **a net decrease in total traffic fatalities by (according to the CDC report), a magnitude that is less than 4% between the 2007 to 2017 time period** (less than 4% because this is a group switching, rather than introducing a new group as in the previous case).
+
+### Interaction with other substances (compliments):
+
+Pathway: Legalization of marijuana -> Readily available marijuana access -> individuals who currently consume alcohol also begin to smoke marijuana -> more people become congitively impaired when driving -> increased traffic accidents
+
+This works directly opposite to my previous speculation. As Sewell et al. notes: "Combining marijuana with alcohol eliminates the ability to use such strategies effectively, [and] results in impairment even at doses which would be insignificant were they of either drug alone.". Therefore, alcohol and marijuana could really be "a sum more than its parts" where even safe dosages of each could lead to decreased cognitive function when taken together.
+
+Therefore, I estimate **a positive effect (positive sign) on the impact of the channel with a magnitude that (all else equal) is bounded upwards by the percent of the population that is already consuming alcohol regularly.** 
+
+### Elimination of black markets, decreased dosage:
+
+Pathway: Legalization of marijuana -> Readily available marijuana access -> decreased "black-market-type" marijuana -> decreased average dosage of marijuana -> individuals who make the switch are less impaired compared to high dosages -> decreased traffic accidents
+
+Since we are talking about a drug, we must then talk about the issue of dosage. as mentioned in Sewell et al., "detrimental effects of cannabis use vary in a dose-related fashion" and that "differences in smoking technique, and different absorption of [THC]" will lead to very different effects. Of course, alcohol dosage is also an issue, but this actually strengthens this line of reasoning, as increased alcohol in the bloodstream due to consuming strong drinks will have a much stronger negative effect on individual's motor abilities. Therefore, assuming that legal retail marijuana will have significantly safer dosages compared to current black market selections, I would reason that legalization and driving out the black market will decrease the average dosage of marijuana onto a safe level. This substitution between black market marijuana and retail marijuana may then decrease the overall negative effects of marijuana on individual's motor skills. Therefore, even if it is the case that legalization brings more people into smoking marijuana, the dosage levels may be low enough to decrease current traffic accident levels. 
+
+Of course, one may argue that consumers may desire higher and higher doses, which may increase the risk in the long run, but looking at the policy in the short term, I believe that the sign on the channel will be negative. Moreover, it is extremely difficult to estimate a magnitude on this line of reasoning, since we do not know how large is the black market consumer base or the actual effect of dosages other than lower is less intrusive. Therefore, I will abstain from concluding a magnitude, but at the same time reason that (all else equal) **the legalization should be a value bounded upwards in magnitude by the current marijuana-consuming population, and it should be a negative sign.**
+
+Here, I have outlined a few causal pathways with various implications of the legalization process on traffic accidents.
+
+## Question 2:
+
+Describe a “natural experiment” research design based on law changes that you will implement using available data that you will collect. (Some things to think about: (a) there have been various versions of legalization/medical marijuana/decriminalization across states. Provide a compelling logic as to which state law change have materially impacted the ability to obtain marijuana legally, (b) give some thought to timing...when do you think marijuana usage will increase relative to passage of relevant laws, and (c) justify your choice of a control group.
+
+### Response:
+
+The 'natural experiment' when only considering traffic fatalities and law changes could be the following: 
+
+  + A difference-in-differences analysis looking at the treatment of U.S. states which have made marijuana readily available (legalization) controlled by the U.S. stats which have only made medical marijuana legal.
+
+Note that By looking at the exact date of legalization will not tell us much, because it is not the case that states are handing out retail liceses prior to the legalization, and the legalization was like a call to start the race in selling weed. Therefore, I would take a look at a few years after the legislation has passed, because this will give time for individuals to act, receive retail licenses and allow businesses focusing on marijuana to be set up. 
+Furthermore, we want to look at three identified states groups (full legalization vs. medical legalization vs. no laws at all) because marijuana legalization usually is passed in steps: first medical use, only then fully legal (recreation). Therefore, it would be helpful to look at the comaprisons between three groups and see how each group differs from one another. Of course, one would usually need to control for other variables (such as demographics), but in our assignment here (where no other covariates are needed), we would only need to think about states with similar *general* charactoristics, such as population and urbanization, which all are helpful in indentifying traffic density, and thus control for traffic accidents.
+
+Here, we then have a roadmap for our 'natural experiment': using a DID analysis, we will look at 3 representative groups of states, representing full legalization, medical use, and fully illegal statuses. For the state selection, we will seek to find states in the full legalization and medical use cohorts with similar characteristics:
+  1) Similar legalization dates for there respective laws.
+  2) Similar population/urbanization characteristics.
+Once we have this control group, we will give a **2-year-lag** on the treatment of full legalization, this is to make sure that the public indeed have increased access to the substance, either from their caregiver or from retail. **(JUSTIFY TWO YEAR LAG??)**
+
+Now I will turn to the data analysis portion of this exercise.
+
+## Question 3: 
+
+Collect data at the state-year level on the legal status of marijuana and on traffic fatality death rates. NO OTHER CONTROL VARIABLES ARE NECESSARY.  Make a summary statistics table, and also a graph showing how traffic deaths and the legal status of marijuana have evolved over time
+
+### Response:
+
+Now turning to data cleaning, I will use date from the U.S. Department of Transportation (https://www-fars.nhtsa.dot.gov/States/StatesFatalitiesFatalityRates.aspx) to continue on with our analysis. Furthermore, I have also utilized a summarized table of information from the National Conference of State Legislatures, CNN, and congress.gov (found here: https://www.civilized.life/articles/timeline-history-of-marijuana-legalization-united-states/) to identify the legislative changes in the U.S.. Using these peices of information, I will then construct the visualizations and tables as required.
 
 ```{r}
 library(tidyverse)
+library(dplyr)
 library(ggplot2)
 library(stringr)
+library(scales)
 
 raw_df <- read.csv("traffic_data.csv")
 
@@ -27,12 +95,16 @@ total_df <- cleaned_df %>%
 long_per_mil <- per_mil_df %>% 
   rename_at(vars(ends_with('_per_mil')), ~ str_remove(.,'_per_mil')) %>% 
   gather(key = "year", value = "death_per_mil",c(-State)) %>% 
-  mutate(year = as.Date(year, format = "%Y"))
+  mutate(year = as.integer(year))
 
 long_per_mil %>% 
   ggplot(aes(x=year,y=death_per_mil)) +
   geom_point() +
   theme(axis.text.x = element_text(angle=60,hjust=1)) +
-  geom_smooth(method = "lm")
+  xlab("Year") +
+  ylab("Traffic Fatalities Per Million") +
+  geom_smooth() +
+  scale_x_continuous(breaks = c(1994:2018))
 ```
+
 
