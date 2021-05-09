@@ -34,43 +34,22 @@ Now glimpsing at each of the data frames, we see that:
   
 Furthermore, there are some interesting findings within each piece of data as well. For example, there are a total of 14 seasons in the regular season data. Since the data is from 2017-2020, we expect there to be 16 seasons. Therefore, one observation could be that (without looking at any other source) there is only data up to to mid-2020, and the last two seasons of 2020 was not observed, assuming that the data indeed starts on the first season of 2017. Therefore, I will treat the seasons' corresponding years accordingly. 
   
-From here, recall that we are most interested on the differential outcomes between regular and championship seasons to tease out whether or not individuals were 'cheating' in the regular season. This is because the championships are live, and individuals cannot readily cheat in that context. Therefore, some basic visualizations will be used to explore the %correct between the two sets of data, as well as within each set of data (say, based on categories, seasons, or between matches). First, however, I will check the distributions of %correct based on categories, matches, and seasons to check if there is some persistence in the regular season data only. If there is some structural differences (i.e. for some reason, different categories have different distributions of mean correct rates), then it would be wise to take a closer look at these variables, and maybe control from them when building the models in the following questions. First, taking a look at the mean percent correct of different categories across years:
+From here, recall that we are most interested on the differential outcomes between regular and championship seasons to tease out whether or not individuals were 'cheating' in the regular season. This is because the championships are live, and individuals cannot readily cheat in that context. Therefore, some basic visualizations will be used to explore the %correct between the two sets of data, as well as within each set of data (say, based on categories, seasons, or between matches). First, however, I will check the distributions of %correct based on categories, matches, and seasons to check if there is some persistence in the regular season data only. If there is some structural differences (i.e. for some reason, different categories have different distributions of mean correct rates), then it would be wise to take a closer look at these variables, and maybe control from them when building the models in the following questions. I will proceed in the following order: 
+  + take a look at the aggregate (not looking at different groups) data in the regular season.
+  + take a look at the aggregate (not looking at different groups) data in the final season.
+  + based on previous observations, address the main issue of finding the differences between the champions and regular season data.
   
-```{r}
-champions_df %>% 
-  group_by(year) %>% 
-  mutate(mean_correct = mean(correct)) %>% 
-  ggplot(aes(x=as.factor(year),y=mean_correct)) +
-  geom_point()
+  
+First, I will show the mean correct rate based on different seasons to see if different years will have different outcomes for the entire group (i.e. If we see that some seasons have significantly different correct rates than any other season, it would be a good idea to consider this factor when predicting within the regular season data.),
+  
 
+```{r}
 regular_df <- regular_df %>% 
   mutate(year = case_when(season<76 ~ 2017,
                           season>=76 & season<80 ~ 2018,
                           season>=80 & season<84 ~ 2019,
                           season>=84 ~ 2020))
 
-cat2017_df <- test %>% 
-  filter(year==2017) %>% 
-  group_by(category) %>% 
-  summarize(mean_correct = mean(correct))
-
-cat2017_df %>%
-  ggplot(aes(x=as.factor(category),y=mean_correct)) +
-  geom_point()
-
-cat_df <- test %>% 
-  group_by(year,category) %>% 
-  summarize(mean_correct = mean(correct))
-
-cat_df %>% 
-  ggplot(aes(x=as.factor(category),y=mean_correct,color=as.factor(year))) +
-  geom_point() +
-  theme(axis.text.x = element_text(angle=60,hjust=1))
-
-```
-Notice from the first visualization above, that the distribution each category's mean correct responses for a given category is centered at different levels. For example, we can see visually that in every year, the mean correct rate of American History category is higher than the Art category, where as Business and Economics is centered somewhere in between the two. Now that we know there are differential mean correct rates within each category in the regular season, we can move on to see whether there are structural variation within the four years of regular competition. Therefore, I will show the mean correct rate based on different seasons to see if different years will have different outcomes (i.e. If we see that some seasons have significantly different correct rates than any other season, it would be a good idea to consider this factor when predicting within the regular season data.)
-
-```{r}
 by_season <- regular_df %>% 
   group_by(season) %>% 
   summarize(mean_correct = mean(correct))
@@ -82,7 +61,9 @@ by_season %>%
   labs(title="Mean correct rate of all individuals through the regular seasons") +
   theme(plot.title=element_text(face="bold",size=(13)))
 ```
-We see that on aggregate, the mean correct rate varies with seasons as well. In particular, we have large fluctuations in the first seasons which includes a spike up to around 52% correctness in seasons 75~77, followed by a sharp decrease back to around 48% in season 78, and generally staying around the 48%~49% range throughout the 5 most recent seasons. Therefore,  if an individual participated in the seasons 75 instead of 74, one could potentially argue (of course this is very unsound) that on average, the individual who participated in 75 would be more likely to answer a question correct than someone who participated in season 74. Of course, there are lots of different confounding variables in this argument, where one could easily look at the distribution of individuals within the seasons and find that in season 75 there was an abundance of individuals who did very well (due to smarts, or even cheating) which lead to this jump from the previous season, and thus does not represent any ordinary individual's ability to answer questions correctly. Nevertheless, because we see variation in the seasons, it would be good to consider this in further analysis. Now that we have checked a higher-level view of the seasons, I will now dive into the matches-level data to see trends or anything that pops out in the regular season.
+
+We see that on aggregate (not distinguishing between subgroups), the mean correct rate varies with seasons as well. In particular, we have large fluctuations in the first seasons which includes a spike up to around 52% correctness in seasons 75~77, followed by a sharp decrease back to around 48% in season 78, and generally staying around the 48%~49% range throughout the 5 most recent seasons. Therefore,  if an individual participated in the seasons 75 instead of 74, one could potentially argue (of course this is very unsound) that on average, the individual who participated in 75 would be more likely to answer a question correct than someone who participated in season 74. Of course, there are lots of different confounding variables in this argument, where one could easily look at the distribution of individuals within the seasons and find that in season 75 there was an abundance of individuals who did very well (due to smarts, or even cheating) which lead to this jump from the previous season, and thus does not represent any ordinary individual's ability to answer questions correctly. Nevertheless, because we see variation in the seasons, it would be good to consider this in further analysis. Now that we have checked a higher-level view of the seasons, I will now dive into the matches-level data to see trends or anything that pops out in the regular season on aggregate (without distinguishing subgroups).
+
 
 ```{r}
 by_match <- regular_df %>% 
@@ -100,9 +81,9 @@ by_match %>%
        x="Matches over time") +
   theme(plot.title=element_text(face="bold",size=(13)))
 ```
-From the graph above, we do not see any systematic trend over time, where these mean correct rates seems as though they were random draws from a normal distribution situated at round 50% (basically random noise), which is a very intuitive result. This indicates that (on average) there shouldn't be an underlying structural influence on the data due to different matches (i.e. it is not evident that there are some matches that are inherently rigged so that the mean correct rate is very high or low relative to every other match). This is already very granular data, and because we cannot see some matches being inherently different from other matches, there is no strong justification to be made about using this variable to make an argument for indicating individual's ability to score on well on a particular question.
+From the graph above, we do not see any systematic trend over time, where these mean correct rates seems as though they were random draws from a normal distribution situated at round 50% (basically random noise), which is a very intuitive result. This indicates that (on average) there shouldn't be an underlying structural influence on the data due to different matches (i.e. it is not evident that there are some matches that are inherently rigged so that the mean correct rate is very high or low relative to every other match). This is already very granular data, and because we cannot see some matches being inherently different from other matches when only looking at the entire sample, there is no strong justification to be made about using this variable to make an argument for indicating individual's ability to score on well on a particular question.
 
-Of course, a critic can easily say that the differnt years will have different trends and this overall trend is misleading. To that I offer the following graphs, which separate each year's matches by the respective years.
+Of course, a critic can easily say that the different years will have different trends and this overall trend is misleading. To that I offer the following graphs, which separate each year's matches by the respective years.
 
 ```{r}
 by_match_t <- regular_df %>% 
@@ -149,13 +130,28 @@ ggarrange(ts1,ts2,ts3,ts4,
           lables=c(2017,2018,2019,2020),
           ncol=2,nrow=2)
 ```
-Here, even in the separate visual cases, it would be extremely hard to argue that there is some seasonality or similarly any inherent structural issues which will provide arguments to support including matches as an explanatory variable.
+Here, even in the separate visual cases, it would be extremely hard to argue that there is some seasonality or similarly any inherent structural issues which will provide arguments to support including matches as an explanatory variable. 
 
 Now that we have seen that, on average, the regular season data is basically random noise, there is no reason to go even more granular and look at questions data. This is because the matches data, which is already quite granular compared to season data, already displays quasi-random noise behavior. Because of this characteristic, even if we take matches data as an explanatory variable, it would already be approaching overfitting. As a result, the questions data, which are the components of the matches data, should not be introduced as an explanatory variable due to the extreme overfitting that it would bring into any model looking at the sample in general.
 
-Now that we have seen how each of our variables of interest is presented in the sample in general within the regular seasons. I will now turn to the champions data and look at variables within that dataframe accordlingly.
+Lastly because the regular data set also provided some category data, it would be interesting to see if the categories are all centered at a particular mean with similar variances throughout the years, or that they are clustered differently.
 
-Glimpsing into the data frame we find that the round date is somewhat parallel to the matches data in the regular season. Therefore, I will take a look at that first and see how it might differ from the regular season's matches data. This graph below will hope to demostrate the trends of the mean correct rate of final rounds over time, and see of there are any structural or inherent traits worth considering.
+```{r}
+regular_df %>% 
+  group_by(category,year) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ggplot(aes(x=as.factor(category),y=mean_correct)) +
+  geom_boxplot(fill="lightblue",color="steelblue") +
+  labs(title="Distribution of mean correct rate of everyone throughout all regular season") +
+  theme(axis.text.x = element_text(angle=60,hjust=1),
+        plot.title = element_text(size=12)) +
+  guides(fill=guide_legend(nrow=3))
+```
+Notice that for each category, the distribution of the mean correct rate of everyone throughout the years have very different distributions. For example, throughout the years, people seem to do poorly relative to American history. This shows that each category has its own **"difficulty", where we define difficulty as an empirical discrepancy between the mean correct rate of particular categories, matches, or questions** and **NOT NECESSARILY** how intrinsically "hard" or "complicated" a question is.
+
+Now that we have seen how each of our variables of interest is presented in the sample in general within the regular seasons. I will now turn to the champions data and look at variables within that dataframe accordingly.
+
+Glimpsing into the champions data frame we find that the round date is somewhat parallel to the matches data in the regular season. Therefore, I will take a look at that first and see how it might differ from the regular season's matches data. This graph below will hope to demostrate the trends of the mean correct rate of final rounds over time, and see of there are any structural or inherent traits worth considering.
 
 ```{r}
 by_round <- champions_df %>% 
@@ -215,33 +211,72 @@ chmp2 <- by_question_finals_year %>%
 ggarrange(chmp1, chmp2, lable=c(2018,2019),
           nrow=2,ncol=1)
 ```
-Again, even spitting up the championships temporally for a more straight forward analysis, there does not seem to be anything about specific questions to write home about regarding explaining one's ability to get a question correct. Therefore, I conclude via visual analysis that at least on average, there should be no explanatory power of questions on one's ability to get correct answers.
+Again, even spitting up the championships temporally for a more straight forward analysis, there does not seem to be (on aggregate) anything about specific questions to write home about regarding explaining one's ability to get a question correct. Therefore, I conclude via visual analysis that at least on average, there should be no explanatory power of questions on one's ability to get correct answers if we only look at the entire population answering the question.
 
-Now that we have taken a look at the regular and championships data separately, I will now address the important issue (which is what the question actually asked) of looking at the difference between the finalists and the non-finalists. First, I will note that according to Prof. Levitt, the final questions are harder than the regular season questions. Therefore, all else equal, we should expect the point estimate of the mean correctness to be much lower in the championships relative to the regular season. Of course, intuitively, the people who are in the championships are selected from the regular season to be the best around, and judging by the sheer difference between the size of the two dataframes, it must be that the finalists must be extremely outstanding in terms of correct rates to be selected in. To confirm these two ideas, I will look at a very high-level analysis of individuals who made it to the championships and see 1) if the championship participants (finalists) are indeed much better than those who are not qualified, and 2) if the questions in the championships are indeed a lot harder. Where 'hard' here is simply defined as the lack of a concentrated distribution of mean correct rate at the higher range (for example, concentrated around 70%~90%).
+Now that we have taken a look at the regular and championships data separately, I will now address the important issue (which is what the question actually asked) of looking at the difference between the finalists and the non-finalists. First, I will note that according to Prof. Levitt, the final questions are harder than the regular season questions. Therefore, all else equal, we should expect the point estimate of the mean correctness to be much lower in the championships relative to the regular season. Of course, intuitively, the people who are in the championships are selected from the regular season to be the best around, and judging by the sheer difference between the size of the two data frames, it must be that the finalists must be extremely outstanding in terms of correct rates to be selected in. To confirm these two ideas, I will look at a very high-level analysis of individuals who made it to the championships and see 1) if the championship participants (finalists) are indeed much better than those who are not qualified, and 2) if the questions in the championships are indeed a lot harder. Where 'hard' here is simply defined as the lack of a concentrated distribution of mean correct rate at the higher range (for example, concentrated around 70%~90%).
 
 First to see if the championship participates are indeed much better than those who are not qualified for the finals.
 
 ```{r}
 finalists_lst <- unique(champions_df$id)
+finalist_2018 <- champions_df %>% 
+  filter(year==2018)
+finalist_2019 <- champions_df %>% 
+  filter(year==2019)
+finalist_overlap <- champions_df %>% 
+  select(id,year) %>% 
+  distinct() %>% 
+  group_by(id) %>% 
+  filter(n()>1)
+
+finalists_lst_2018 <- unique(finalist_2018$id)
+finalists_lst_2019 <- unique(finalist_2019$id)
+finalists_lst_overlap <- unique(finalist_overlap$id)
 
 regular_df <- regular_df %>% 
   mutate(is_finalist = ifelse(user_id %in% finalists_lst,1,0))
 
-regular_ID <- regular_df %>% 
+regular_ID_full <- regular_df %>% 
   group_by(user_id,is_finalist) %>% 
   summarize(mean_correct = mean(correct))
 
-regular_ID %>% 
+regular_ID_2019 <- regular_df %>% 
+  filter(year==2019) %>% 
+  group_by(user_id,is_finalist) %>% 
+  summarize(mean_correct = mean(correct))
+
+regular_ID_2018 <- regular_df %>% 
+  filter(year==2018) %>% 
+  group_by(user_id,is_finalist) %>% 
+  summarize(mean_correct = mean(correct))
+
+regular_ID_full %>% 
   ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
   geom_density(alpha=0.6)  +
-  labs(title="Finalist vs. non-finalists performance in regular season")
+  labs(title="Finalist vs. non-finalists performance in regular season throughout")
+
+reg_cohort_2019 <- regular_ID_2019 %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
+  geom_density(alpha=0.6)  +
+  labs(title="Finalist vs. non-finalists performance in regular season 2019") +
+  scale_fill_discrete(name="",labels=c("Not Finalist","Finalist"))
+
+reg_cohort_2018 <- regular_ID_2018 %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
+  geom_density(alpha=0.6)  +
+  labs(title="Finalist vs. non-finalists performance in regular season 2018",
+       fill="") +
+  scale_fill_discrete(name="",labels=c("Not Finalist","Finalist"))
+
+ggarrange(reg_cohort_2018, reg_cohort_2019, label=c(2018,2019),
+          nrow=2,ncol=1)
 ```
 Here, we see a very intuitive outcome: Those who are in the finals have scored extremely well during the regular season. This shows that the intuition that the finalists are only those who are extremely outstanding in terms of correct percentage holds empirically.
 
-Now looking into the second question, we expect that the finals should have harder questions relative to the regular season. This should be identified if we see that peak that is the finalists performance during the regular season flatten out and return to the lower ranges of the mean correct rates. The following graph presents the performance of finalists during the regular season and the championships.
+Now looking into the second question, we expect that the finals should have more difficult (where we have already defined difficult as an empirically different mean correct rate, so here "more difficult" means "lower mean correct rate") questions relative to the regular season. This should be identified if we see that peak that is the finalists performance during the regular season flatten out and return to the lower ranges of the mean correct rates. The following graph presents the performance of finalists during the regular season and the championships.
 
 ```{r}
-filtered_ID <- regular_ID %>% 
+filtered_ID <- regular_ID_full %>% 
   filter(is_finalist==1) %>% 
   select(-is_finalist) %>% 
   rename(id=user_id)
@@ -254,12 +289,237 @@ joined_finalists <- champions_df %>%
   mutate(reg_final = case_when(reg_final=="mean_correct_final"~"final",
                                reg_final=="mean_correct"~"regular"))
 
+joined_finalists_2019 <- champions_df %>% 
+  group_by(id) %>% 
+  filter(year==2019) %>% 
+  summarize(mean_correct_final = mean(correct)) %>% 
+  left_join(filtered_ID,by="id") %>% 
+  gather(reg_final,correct_rate,mean_correct_final:mean_correct) %>% 
+  mutate(reg_final = case_when(reg_final=="mean_correct_final"~"final",
+                               reg_final=="mean_correct"~"regular"))
+
+joined_finalists_2018 <- champions_df %>% 
+  group_by(id) %>% 
+  filter(year==2018) %>% 
+  summarize(mean_correct_final = mean(correct)) %>% 
+  left_join(filtered_ID,by="id") %>% 
+  gather(reg_final,correct_rate,mean_correct_final:mean_correct) %>% 
+  mutate(reg_final = case_when(reg_final=="mean_correct_final"~"final",
+                               reg_final=="mean_correct"~"regular"))
+
 joined_finalists %>% 
   ggplot(aes(x=correct_rate,fill=reg_final)) +
   geom_density(alpha=0.6) +
   labs(title="Finalist performace in regular and championships")
+
+finalist_cohort_2018 <- joined_finalists_2018 %>% 
+  ggplot(aes(x=correct_rate,fill=reg_final)) +
+  geom_density(alpha=0.6) +
+  labs(title="Finalist performace in regular and championships 2018") +
+  scale_fill_discrete(name="",labels=c("During Regulars","During Champions"))
+
+finalist_cohort_2019 <- joined_finalists_2019 %>% 
+  ggplot(aes(x=correct_rate,fill=reg_final)) +
+  geom_density(alpha=0.6) +
+  labs(title="Finalist performace in regular and championships 2019") +
+  scale_fill_discrete(name="",labels=c("During Regulars","During Champions"))
+
+ggarrange(finalist_cohort_2018, finalist_cohort_2019, label=c(2018,2019),
+          nrow=2,ncol=1)
 ```
-Notice that this graph is extremely similar to that above! Not to be confused, this graph directly above shows the differencial performance of the finalists during the regular season (outlined blue), and the championships(outlined red). This emirically shows our second idea that the championships are much harder in terms of correct rates is true.
+Notice that this graph is extremely similar to that above graph with different cohorts (finalists vs. non-finalists)! However, to be confused, this graph directly above shows the differential performance of the finalists during the regular season (outlined blue), and the championships(outlined red). This empirically shows our second idea that the championships are much harder in terms of correct rates is true. 
+
+Furthermore, one could even argue that the finals questions have been designed so that it would exactly flatten the 'finalists' curve to have a similar distribution to that of the regular season participants. Let's see if this holds. Now that we have seen these two comparisons, lets check how the finalist do in the championship versus how non-finalists do in the regular rounds (basically overlaying the two red distributions from the previous two graphs)
+
+```{r}
+sum_champs_2018 <- champions_df %>% 
+  group_by(id) %>% 
+  filter(year==2018) %>% 
+  summarize(mean_correct_final = mean(correct)) %>% 
+  rename(user_id=id)
+
+sum_champs_2019 <- champions_df %>% 
+  group_by(id) %>% 
+  filter(year==2019) %>% 
+  summarize(mean_correct_final = mean(correct)) %>% 
+  rename(user_id=id)
+
+sum_champs_full <- champions_df %>% 
+  group_by(id) %>% 
+  summarize(mean_correct_final = mean(correct)) %>% 
+  rename(user_id=id)
+
+reg_fin_join_full <- regular_ID_full %>% 
+  left_join(sum_champs_full,by="user_id") %>% 
+  mutate(mean_correct = ifelse(is_finalist==1,mean_correct_final,mean_correct)) %>% 
+  select(-mean_correct_final)
+
+reg_fin_join_2018 <- regular_ID_2018 %>% 
+  left_join(sum_champs_full,by="user_id") %>% 
+  mutate(mean_correct = ifelse(is_finalist==1,mean_correct_final,mean_correct)) %>% 
+  select(-mean_correct_final)
+
+reg_fin_join_2019 <- regular_ID_2019 %>% 
+  left_join(sum_champs_full,by="user_id") %>% 
+  mutate(mean_correct = ifelse(is_finalist==1,mean_correct_final,mean_correct)) %>% 
+  select(-mean_correct_final)
+
+reg_fin_join_full %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
+  geom_density(alpha=0.6) +
+  labs(title="Regular season performance by non-finalists\n                           vs.\nChampionship performance by finalists",
+       fill="") +
+  scale_fill_discrete(labels=c("Regulars","Finalists"))
+
+reg_fin_2018_gr <- reg_fin_join_2018 %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
+  geom_density(alpha=0.6) +
+  labs(title="Regular season performance by non-finalists\n                           vs.\nChampionship performance by finalists\nin 2018",
+       fill="") +
+  scale_fill_discrete(labels=c("Regulars","Finalists"))
+
+reg_fin_2019_gr <- reg_fin_join_2019 %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(is_finalist))) +
+  geom_density(alpha=0.6) +
+  labs(title="Regular season performance by non-finalists\n                           vs.\nChampionship performance by finalists\nin 2019",
+       fill="") +
+  scale_fill_discrete(labels=c("Regulars","Finalists"))
+
+ggarrange(reg_fin_2018_gr,reg_fin_2019_gr)
+```
+```{r}
+
+```
+
+Indeed, it seems that the championships have 'flattened out' the mean correct rate of individuals who made the finals! Here, we see that on average, each group's distribution within their 'appropriate' difficulty of questions, as in, the finalists gets harder questions, and non-finalists gets normal questions, is relatively similar. However, we see a small bump near the 0.25 mark for the finalist group. While someone could argue that those who get very low scores indicate those who have "Cheated" in the regular season, and could thus lead to this skew, I do not believe this is the case. This is because unlike the regular season, "after day 2, the bottom performers are eliminated". Nevertheless, this discussion will be postponed to question 4, where we will dive deep into the question of cheating after we have constructed some models to predict individual correctness during the regular and finals season.
+
+Finally, checking the categories between finalists and non-finalists, we find that...
+
+```{r}
+regular_df %>% 
+  group_by(is_finalist,season,category) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  arrange(category) %>% 
+  ggplot(aes(x=season,y=mean_correct,color=as.factor(is_finalist))) +
+  geom_line() +
+  facet_wrap(~category)
+
+regular_df %>% 
+  group_by(is_finalist,season,category) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  arrange(category) %>% 
+  mutate(is_finalist = case_when(is_finalist==0~"Regular",
+                                 is_finalist==1~"Finalist")) %>% 
+  spread(is_finalist,mean_correct) %>% 
+  mutate(diff = Finalist-Regular) %>% 
+  ggplot(aes(x=season,y=diff)) +
+  geom_line() +
+  facet_wrap(~category)
+
+regular_df %>% 
+  group_by(is_finalist,season,match,year) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ungroup() %>% 
+  arrange(is_finalist) %>% 
+  group_by(is_finalist) %>% 
+  mutate(idx = row_number()) %>% 
+  ggplot(aes(x=idx,y=mean_correct,color=as.factor(is_finalist))) +
+  geom_line()
+```
+In this large collection of graphs, the mean correct rate of individuals who got into the finals vs. the mean correct rate of individuals who did not get into the finals is shown. Notice that for all the graphs, those who got into the finals will have a strictly higher level scores than those who didn't (which makes sense, because that's how they got into the finals in the first place). However, what is more intresting is the trends over time. In particular most of the categories (such as Television, Science, Classical Music, Current events etc.).T
+
+To sum up, I have shown that looking at simple aggregate data on seasons and matches in the regular season data, as well as round and questions data in the championship data, all exhibit random behavior which does not help to predict the correctness of an individual's answer. Furthermore, I have shown that for different categories, the mean correct rate throughout the years are clustered differently. Furthermore, we see that finalists are strictly better than non finalists in each category in terms of mean correct rates. This might lead to an predictive variable we can use to predict an individual's ability to get a particular question right. As seen in the data this holds because, if the individual is a finalist instead of a non-finalists, and the question is about American history and not art, then it must be that we should expect her to do better than the case where she was a non-finalist doing art (check figures on categories for concrete justification). Finally, I have shown that finalists and non-finalists have very different mean correct rates. In particular, finalists are far better at answering regular questions than non-finalists (since that's how they are chosen as finalists anyways). However, finalists performance drop dramatically once the actual championship questions are presented, where they share a very similar distirbution in mean correct rates as the non-finalists in the regular season.
+
+### Question 2:
+
+Build a good model for predicting whether or a not a person will get a particular question right in the regular season. Describe why you made the modeling choices you made.
+
+### Response:
+
+For this question, the story is: if this is all the data that we have and we also have information about a specific question X in the regular season, then imagine a random individual A comes up to us and asks "how do you thing I will do in answering this specific question X?".
+
+At the core of this prediction, it boils down to two intuitive points that we need to ask ourselves before we respond to this individual A: how good at answering questions is individual A and controlling for how difficult is the question X? Motivated by these two points and connecting this with what we have discovered in question one, I believe a good model would include the following considerations:
+
+To measure how "good" an individual is, I believe it is most intuitive to take:
+  + the individual's average score in the past *year* in a particular category as a measure of her question-answering skills in the particular category within the regular seasons (similar in ideas to an autoregressive forecast)
+  
+To control how "difficult" a question is for that individual, I believe it is most intuitive to take:
+  + the performance of people in the same subgroup (finalist vs non-finalist) answering the same category of questions in the previous *year* (for example, if she is in the finalists, and everyone in the finalist group gets the type of questions right in the past, then likely she will also get the same type of question right in the future)
+  
+Note that I have chosen year-level data because I want to capture a holistic picture one's recent ability to answer specific questions while not getting caught in the variation that occurs on the matches level. *Furthermore, since the match-level data is stationary for each subgroup, this will not necessarily be problematic in anyway since we do not have moving averages even if we look at the entire data set, so needless to say that match-level data for any given season is stationary as well. Therefore, the choice of using average scores on a season level will both capture the necessary information while not be biased or overfitting in any sense.* Furthermore, if we have individuals who have never attempted a question type, then their personal mean will be zero. This is not an issue because we are effectively stating "I have no idea how you will do in this question, so I cannot say that you will be better or worse than your peers" in our regression.
+
+Therefore, starting out with this simple model:
+
+```{r}
+q2_regession_df <- regular_df %>% 
+  filter(year==2018) %>% 
+  mutate(is_finalist = ifelse(user_id %in% finalists_lst_2018,1,0)) %>% 
+  group_by(user_id,category,year)
+
+q2_regression_ready <- q2_regession_df %>% 
+  mutate(id_mean_correct_in_category = mean(correct)) %>% 
+  ungroup() %>% 
+  group_by(is_finalist,category) %>% 
+  mutate(group_mean_correct_in_category = mean(correct))
+
+```
+
+
+### CHEATING QUESTION:
+
+Therefore, even within the finalists, there are two groups that we need to consider: those who were eliminated halfway through (i.e. could not participate past the second round), and those who were not. Now, I will split the Finalists group into the two aforementioned components. In doing so, we can see exactly how different are the two groups. This will serve as a starting point for the question on whether or not there are cheaters. (4)
+
+```{r}
+past_filter <- champions_df %>% 
+  group_by(id) %>% 
+  filter(round>2)
+
+past_filter_list = unique(past_filter$id)
+
+champions_df %>% 
+  mutate(to_end = ifelse(id %in% past_filter_list,1,0)) %>% 
+  group_by(id,to_end) %>% 
+  filter(round<=2,year==2019) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(to_end))) +
+  geom_density(alpha=0.6) +
+  labs(title="Finalist performance in first two rounds by elimination 2019")
+
+champions_df %>% 
+  mutate(to_end = ifelse(id %in% past_filter_list,1,0)) %>% 
+  group_by(id,to_end) %>% 
+  filter(round<=2,year==2018) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ggplot(aes(x=mean_correct,fill=as.factor(to_end))) +
+  geom_density(alpha=0.6) +
+  labs(title="Finalist performance in first two rounds by elimination 2018")
+```
+Here, we would have expected some difference between the two distributions for both 2018 and 2019 data; since those who are eliminated are precisely those who do worse, this graph makes sense. Looking at each graph individually, the 2018 graph shows that those eliminated were extremely worse off relative to those who proceeded. Also worth noting is that those who move forward holds a bimodal distribution, meaning that they could possibly be indicating two subgroups, those who barely got through, and those who are truly good at trivia (since cheating is impossible).
+
+However, there is a very interesting component to the 2019 graph: those who were eliminated show a somewhat bimodal distribution as well. While we have already explained that there might be a different subgroups in those who move onwards, where there could be trivia nerds who are simply amazing at trivia and those who are still knowledgeable enough to make it, but the questions are harder in the finals. This highlights why the individuals who did extremely well in the regular season might have slipped down in correctness rates a bit. The final rates still seem reasonable, where they could get the most (around 60%) of the questions correct. However, the same reasoning can be applied to the eliminated group: the red peak which is most right can be interpreted as simply those who entered the finals, but the individual's ability was just not enough. The most interesting aspect of the graph above is the "hump-shaped" distribution at around 20%~30%. In particular, how is it that they are slipping so low relative to their peers who are facing the same questions? If this group was indeed "homogenous" in the sense that they are all really good trivia buffs but some just happen to do poorly by chance, why would there be a large concentration of individuals who scored so low? I will do a quick histogram to find if there is indeed a separation of two groups within the eliminated group
+
+```{r}
+champions_df %>% 
+  mutate(to_end = ifelse(id %in% past_filter_list,1,0)) %>% 
+  group_by(id,to_end) %>% 
+  filter(round<=2,year==2019,to_end==0) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ggplot(aes(x=mean_correct)) +
+  geom_histogram(alpha=0.6,bins=12) +
+  labs(title="Finalist performance in first two rounds by elimination 2019")
+
+champions_df %>% 
+  mutate(to_end = ifelse(id %in% past_filter_list,1,0)) %>% 
+  group_by(id,to_end) %>% 
+  filter(round<=2,year==2018,to_end==0) %>% 
+  summarize(mean_correct = mean(correct)) %>% 
+  ggplot(aes(x=mean_correct)) +
+  geom_histogram(alpha=0.6,bins=12) +
+  labs(title="Finalist performance in first two rounds by elimination 2019")
+```
+
+
+This raises the question about whether or not the group which entered the finals is indeed a "homogonous" group in the sense that their skills are indeed fully represented by their correct rates in the regular season Since a normal distribution will indicates that there is no inherent or structural difference between the groups (and distribution is simply variation), this bimodal distribution is curious because it hints at that there might be something more inherent happening. Furthermore, there is also "hump"
 
 ```{r}
 champ_year <- champions_df %>% 
@@ -301,3 +561,11 @@ joined_full_1819 %>%
 ```
 
 This is because the finals data does not distinguish based on category. Therefore, if we do a difference in means analysis, (assuming we may run the risk of claiming people that do not get. However, there is something interesting: it seems that in 2018, the finals and regulars were quite closely spaced together, yet for some reason, there seems to be a large jump in correct rate in the 2019 finals. However, the 2019 case is sort of what we expect! Since the championships select the best of the best, we definitely would expect some sort of difference in the mean_correct variable if the people at the finals were indeed better at taking questions on aggregate. This brings up the possibility: what if it is the case that people cheated more in 2018, and thus the correct rate of the "amateur" group in the regular season nearly matches the "pro" group who actually went to the finals? i.e. it is not necessarily that the finalists cheated (which should be interesting to check if finalists have relatively the same trend in regular and final situations), but it could the case that people **cheated more in 2018, but still could not make the finals**, and thus **inflating the correct rate?**
+
+```{r}
+
+df %>% 
+  lm(corrup ~ censor + year_dummy + city_dummy)
+
+```
+
