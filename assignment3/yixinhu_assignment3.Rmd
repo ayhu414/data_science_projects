@@ -426,9 +426,9 @@ regular_df %>%
   ggplot(aes(x=idx,y=mean_correct,color=as.factor(is_finalist))) +
   geom_line()
 ```
-In this large collection of graphs, the mean correct rate of individuals who got into the finals vs. the mean correct rate of individuals who did not get into the finals is shown. Notice that for all the graphs, those who got into the finals will have a strictly higher level scores than those who didn't (which makes sense, because that's how they got into the finals in the first place). However, what is more intresting is the trends over time. In particular most of the categories (such as Television, Science, Classical Music, Current events etc.).T
+In this large collection of graphs, the mean correct rate of individuals who got into the finals vs. the mean correct rate of individuals who did not get into the finals is shown. Notice that for all the graphs, those who got into the finals will have a strictly higher level scores than those who didn't (which makes sense, because that's how they got into the finals in the first place). However, what is more interesting is the trends over time. In particular most of the categories (such as Television, Science, Classical Music, Current events etc.).T
 
-To sum up, I have shown that looking at simple aggregate data on seasons and matches in the regular season data, as well as round and questions data in the championship data, all exhibit random behavior which does not help to predict the correctness of an individual's answer. Furthermore, I have shown that for different categories, the mean correct rate throughout the years are clustered differently. Furthermore, we see that finalists are strictly better than non finalists in each category in terms of mean correct rates. This might lead to an predictive variable we can use to predict an individual's ability to get a particular question right. As seen in the data this holds because, if the individual is a finalist instead of a non-finalists, and the question is about American history and not art, then it must be that we should expect her to do better than the case where she was a non-finalist doing art (check figures on categories for concrete justification). Finally, I have shown that finalists and non-finalists have very different mean correct rates. In particular, finalists are far better at answering regular questions than non-finalists (since that's how they are chosen as finalists anyways). However, finalists performance drop dramatically once the actual championship questions are presented, where they share a very similar distirbution in mean correct rates as the non-finalists in the regular season.
+To sum up, I have shown that looking at simple aggregate data on seasons and matches in the regular season data, as well as round and questions data in the championship data, all exhibit random behavior which does not help to predict the correctness of an individual's answer. Furthermore, I have shown that for different categories, the mean correct rate throughout the years are clustered differently. Furthermore, we see that finalists are strictly better than non finalists in each category in terms of mean correct rates. This might lead to an predictive variable we can use to predict an individual's ability to get a particular question right. As seen in the data this holds because, if the individual is a finalist instead of a non-finalists, and the question is about American history and not art, then it must be that we should expect her to do better than the case where she was a non-finalist doing art (check figures on categories for concrete justification). Finally, I have shown that finalists and non-finalists have very different mean correct rates. In particular, finalists are far better at answering regular questions than non-finalists (since that's how they are chosen as finalists anyways). However, finalists performance drop dramatically once the actual championship questions are presented, where they share a very similar distribution in mean correct rates as the non-finalists in the regular season.
 
 ### Question 2:
 
@@ -446,11 +446,13 @@ To measure how "good" an individual is, I believe it is most intuitive to take:
 To control how "difficult" a question is for that individual, I believe it is most intuitive to take:
   + the performance of people in the same subgroup (finalist vs non-finalist) answering the same category of questions in the previous *year* (for example, if she is in the finalists, and everyone in the finalist group gets the type of questions right in the past, then likely she will also get the same type of question right in the future)
   
-Note that I have chosen year-level data because I want to capture a holistic picture one's recent ability to answer specific questions while not getting caught in the variation that occurs on the matches level. *Furthermore, since the match-level data is stationary for each subgroup, this will not necessarily be problematic in anyway since we do not have moving averages even if we look at the entire data set, so needless to say that match-level data for any given season is stationary as well. Therefore, the choice of using average scores on a season level will both capture the necessary information while not be biased or overfitting in any sense.* Furthermore, if we have individuals who have never attempted a question type, then their personal mean will be zero. This is not an issue because we are effectively stating "I have no idea how you will do in this question, so I cannot say that you will be better or worse than your peers" in our regression.
+Note that I have chosen year-level data because I want to capture a holistic picture one's recent ability to answer specific questions while not getting caught in the variation that occurs on the matches level. *Furthermore, since the match-level data is stationary for each subgroup, this will not necessarily be problematic in anyway since we do not have moving averages even if we look at the entire data set, so needless to say that match-level data for any given season is stationary as well. Therefore, the choice of using average scores on a season level will both capture the necessary information while not be biased or overfitting in any sense.* Furthermore, if we have individuals who have never attempted a question type, then their personal mean will be zero. This is not an issue because we are effectively stating "I have no idea how you will do in this question, so I cannot say that you will be better or worse than your peers" in our regression. Note that for the sake of easier interpretations of 'odds' in a logit regression, I will multiply the correct rate by 100. My justification for this is to turn the logit coefficients into ones interpretable by using the logic "for 1 unit increase (i.e. for 1% increase), how would I increase my odds in getting the question right".
 
 Therefore, starting out with this simple model:
 
 ```{r}
+library(aod)
+
 q2_regession_df <- regular_df %>% 
   filter(year==2018) %>% 
   mutate(is_finalist = ifelse(user_id %in% finalists_lst_2018,1,0)) %>% 
@@ -460,14 +462,263 @@ q2_regression_ready <- q2_regession_df %>%
   mutate(id_mean_correct_in_category = mean(correct)) %>% 
   ungroup() %>% 
   group_by(is_finalist,category) %>% 
-  mutate(group_mean_correct_in_category = mean(correct))
+  mutate(group_mean_correct_in_category = mean(correct),
+         id_mean_correct_in_category = id_mean_correct_in_category*100,
+         group_mean_correct_in_category = group_mean_correct_in_category*100)
 
+test_lm <- glm(data=q2_regression_ready, correct ~ (id_mean_correct_in_category) + (group_mean_correct_in_category) ,family="binomial")
+
+summary(test_lm)
+
+q2_test_df <- regular_df %>% 
+  filter(year==2019) %>% 
+  mutate(is_finalist = ifelse(user_id %in% finalists_lst_2019,1,0)) %>% 
+  group_by(user_id,category,year)
+
+q2_test_ready <- q2_test_df %>% 
+  mutate(id_mean_correct_in_category = mean(correct)) %>% 
+  ungroup() %>% 
+  group_by(is_finalist,category) %>% 
+  mutate(group_mean_correct_in_category = mean(correct),
+         id_mean_correct_in_category = id_mean_correct_in_category*100,
+         group_mean_correct_in_category = group_mean_correct_in_category*100)
+
+predicted_possibilities_q2 <- predict(test_lm, q2_test_ready, type="response")
+
+verdicts_q2 <- rep(0, dim(q2_test_ready)[1])
+verdicts_q2[predicted_possibilities_q2 > .5] = 1
+
+test_results <- as.data.frame(cbind(verdicts_q2,q2_test_ready$correct))
+
+test_results %>% 
+  rename(actual_results = V2,
+         predicted_results = verdicts_q2) %>% 
+  mutate(correct_prediction = ifelse(predicted_results==actual_results,1,0)) %>% 
+  summarize(predicted_accuracy = mean(correct_prediction))
+
+regression_coefficient_percents <- (exp(coef(test_lm))-1)*100
+
+regression_coefficient_percents
+```
+In this basic logit regression, where we considered individual's performance as well as how difficult is this category among their peers. Although this extremely parsimonious prediction does give a fairly decent predicted accuracy of around 68%, this the model itself warrants a lot of explanation. 
+
+Stepping back from this the model for a quick second, I would like to restate the idea that we are primarily focused on the first coefficient, and the second variate is more of a means of controlling for the general difficulty of the type of question.
+
+Recall that I have multiplied all the percentages (fractions between 0 and 1) into percent units (numbers between 0 and 100). This is so that our interpretation of the coefficient for the logit regression actually makes sense. First of all, the coefficients are still in log odds ratios, an incredibly cryptic unit. Converting it back to normal percentiles, we get that that coefficient which states that for a percent increase one's own mean correctness in the specified category, there is a 4.767 percent increase in the chances that individual A will get the specific question X right. On the other hand, for the coefficient on the group mean of the particular category, a percent increase in how well your group is doing will indicate a 0.080 percent increase in the individual A's probability of getting the specific question X right. 
+
+To conclude, we have built a model where, by controlling the difficulty of the category in question, we estimate how one's previous performance in the specific question type will influence the rate at which the same individual will get a question right in the same category. Once we have completed the model, we have checked to see that our model has an correct rate of 67.88% by training on the 2017 data and testing on the 2018 data.
+
+NOTES:
+
+Please note that this model is extremely parsimonious, where I left out any analysis on the question level (i.e. looking at whether or not that exact specific question was a difficult question or not). However, I do not believe that adding such a granular piece of information, given that the question-level data are very random, would be a sound modeling choice. Therefore, I acknowledge that I had left out some additional explanatory power, but I believe the parsimonious model that I have constructed is the most intuitive one I can find and also getting a good predicted result.
+
+### Question 3:
+
+Build a good model for predicting whether or not a person will get a particular question right in the first two rounds of the championship using ONLY information from the regular season. Describe why you made the modeling choices you made.
+
+### Response:
+
+The wording of this question is not entirely clear as to who are we predicting. Because if one person never makes the championships, it would be quite weird to claim that the person would get any significant amount (say >1) questions right in the championships at all, because the distributions between the two finalists and non-finalists are so different in the regular season. Therefore, I will interpret the question as follows. The idea of this questions goes something like this: The finalist roster is out, and a finalists A asks us how well will she do answering a championship question X. 
+
+There are few pieces of information that we must consider before going into this question:
+  + the finals questions are empirically more difficult than the regular season data (see question 1)
+  + individuals are eliminated after the first two rounds in the finals if they are not doing well
+  + championships data do not provide any question categories
+  + we are limited to only running regressions on the regular season data, but looking at the finals data for general information is allowed.
+  
+The main point of interest is with the first piece of information provided above, where we have already seen that the finals questions are very difficult relative to the regular questions (since the cluster of finalists which were skewed to the 80th percentile was pushed back to a normal distribution centered at around the 50th percentile). Therefore, the main type of questions that we must consider is the "more difficult questions", and we can no longer use the category variable here. 
+
+Now that we are only left with the most bare-bones data, I think the most intuitive thing to do here is to look at how finalists do in the hardest questions in the regular season. It should be that individuals who do well on the most difficult questions should do well in the finals as well, where the questions are inherently more difficult. 
+
+Following our definition of difficulty, I believe that take the questions where most people in one's cohort get incorrect. To get a sense of the difficulty, I must first choose what would be the cutoff for a "difficult question". While this sounds quite arbitrary, I will do my best to avoid introducing biases into the analysis. In particular, I will use a methodology that is extremely similar to the one from the previous question, where I simply substitute the "subject category" into the "difficult category". I will select the regular season questions where the finalist group gets similar correct rates as that of the championship data, where we have seen the distribution in question 1. After checking how the difficult question is for the finalists, I will see how well does the individual herself answer the specific question. Once again, I have taken the two-pronged approach, where the main determinants of getting a question right depends on individual's ability while accounting for checking how difficult was the question among similar individuals. 
+
+NOTE: while we could easily account for whether or not an individual has participated in previous finals, where we expect previous participation will most likely increase one's chances of getting a question right in the finals, I will not include this aspect to this following regression. 
+
+```{r}
+q3_df <- regular_df %>% 
+  filter(year==2018) %>% 
+  mutate(is_finalist = ifelse(user_id %in% finalists_lst_2018,1,0)) %>% 
+  filter(is_finalist==1) %>% 
+  group_by(season,match,question) %>% 
+  mutate(mean_correct_of_q = mean(correct))
+
+qtl <- quantile(q3_df$mean_correct_of_q,seq(0.01,1,by=(1/9)))
+
+q3_df_scored <- q3_df %>% 
+  mutate(question_category=case_when(mean_correct_of_q <= qtl[1] ~ 1,
+                                     mean_correct_of_q > qtl[1] & mean_correct_of_q <= qtl[2] ~ 2,
+                                     mean_correct_of_q > qtl[2] & mean_correct_of_q <= qtl[3] ~ 3,
+                                     mean_correct_of_q > qtl[3] & mean_correct_of_q <= qtl[4] ~ 4,
+                                     mean_correct_of_q > qtl[4] & mean_correct_of_q <= qtl[5] ~ 5,
+                                     mean_correct_of_q > qtl[5] & mean_correct_of_q <= qtl[6] ~ 6,
+                                     mean_correct_of_q > qtl[6] & mean_correct_of_q <= qtl[7] ~ 7,
+                                     mean_correct_of_q > qtl[7] & mean_correct_of_q <= qtl[8] ~ 8,
+                                     mean_correct_of_q > qtl[8] ~ 9))
+  # mutate(question_score=case_when(question_category==1 ~ 9,
+  #                                    question_category==2 ~ 8,
+  #                                    question_category==3 ~ 7,
+  #                                    question_category==4 ~ 6,
+  #                                    question_category==5 ~ 5,
+  #                                    question_category==6 ~ 4,
+  #                                    question_category==7 ~ 3,
+  #                                    question_category==8 ~ 2,
+  #                                    question_category==9 ~ 1)) %>%
+  # group_by(user_id) %>% 
+  # mutate(score_for_question = ifelse(correct==0,0,question_score)) %>% 
+  # mutate(score=sum(score_for_question)/n()) 
+
+q3_df_scored_filtered <- q3_df_scored %>% 
+  filter(question_category<4) %>% 
+  group_by(user_id,question_category) %>% 
+  mutate(id_mean_correct_in_cat = mean(correct)*100,
+         mean_correct_of_q = mean_correct_of_q*100)
+  
+  
+#notice this distribution is similar to the distribution of finals!
+
+#running the regression
+
+finals_lm <- glm(data=q3_df_scored_filtered, correct ~ (id_mean_correct_in_cat) + (mean_correct_of_q) ,family="binomial")
+
+summary(finals_lm)
+
+q3_test <- champions_df %>% 
+  filter(year==2018) %>% 
+  group_by(round,question) %>% 
+  mutate(mean_correct_of_q = mean(correct))
+
+qtl_test <- quantile(q3_test$mean_correct_of_q,seq(0.01,1,by=(1/9)))
+
+q3_test_scored <- q3_test %>% 
+  mutate(question_category=case_when(mean_correct_of_q <= qtl[1] ~ 1,
+                                     mean_correct_of_q > qtl[1] & mean_correct_of_q <= qtl[2] ~ 2,
+                                     mean_correct_of_q > qtl[2] & mean_correct_of_q <= qtl[3] ~ 3,
+                                     mean_correct_of_q > qtl[3] & mean_correct_of_q <= qtl[4] ~ 4,
+                                     mean_correct_of_q > qtl[4] & mean_correct_of_q <= qtl[5] ~ 5,
+                                     mean_correct_of_q > qtl[5] & mean_correct_of_q <= qtl[6] ~ 6,
+                                     mean_correct_of_q > qtl[6] & mean_correct_of_q <= qtl[7] ~ 7,
+                                     mean_correct_of_q > qtl[7] & mean_correct_of_q <= qtl[8] ~ 8,
+                                     mean_correct_of_q > qtl[8] ~ 9))
+  # mutate(question_score=case_when(question_category==1 ~ 9,
+  #                                    question_category==2 ~ 8,
+  #                                    question_category==3 ~ 7,
+  #                                    question_category==4 ~ 6,
+  #                                    question_category==5 ~ 5,
+  #                                    question_category==6 ~ 4,
+  #                                    question_category==7 ~ 3,
+  #                                    question_category==8 ~ 2,
+  #                                    question_category==9 ~ 1)) %>%
+  # group_by(user_id) %>% 
+  # mutate(score_for_question = ifelse(correct==0,0,question_score)) %>% 
+  # mutate(score=sum(score_for_question)/n()) 
+
+q3_test_filtered <- q3_test_scored %>% 
+  filter(round<3) %>%
+  group_by(id,question_category) %>% 
+  mutate(id_mean_correct_in_cat = mean(correct)*100,
+         mean_correct_of_q = mean_correct_of_q*100)
+
+predicted_possibilities_q3 <- predict(finals_lm, q3_test_filtered, type="response")
+
+verdicts_q3 <- rep(0, dim(q3_test_filtered)[1])
+verdicts_q3[predicted_possibilities_q3 > .5] = 1
+
+test_results_q3 <- as.data.frame(cbind(verdicts_q3,q3_test_filtered$correct))
+
+test_results_q3 %>% 
+  rename(actual_results = V2,
+         predicted_results = verdicts_q3) %>% 
+  mutate(correct_prediction = ifelse(predicted_results==actual_results,1,0)) %>% 
+  summarize(predicted_accuracy = mean(correct_prediction))
+
+regression_coefficient_percents_q3 <- (exp(coef(finals_lm))-1)*100
+
+regression_coefficient_percents_q3
+```
+Therefore, we have arrived at a pretty decent result once we test our model! In particular, the parsimonious logit model was able to accurately predict 74% of the championship questions correctly. Again, since we have used a logit model, some additional details should be provided. In particular, I have again multiplied all percent into percent units to ease the interpretation on the logit coefficient. The raw output will be given in the code, but I will spare the reader from the boring model. Simply, the logit model tells us that for every percent increase in the mean ability of finalist A to answer a question in the finals of a specific difficulty bracket correct, the probability of finalist A getting another question X in the same difficulty bracket goes up by 4.24%. On the other hand, if all the finalists collectively are one percent better at answering the questions of a specific category, then this particular finalist A will have a 1.39% higher chance of getting this question right as well.
+
+Therefore, we have constructed a logit model which correctly estimates 74% of the finals data correctly without actually requiring finals data prior to testing. i.e. if we didn't need to show the accuracy or "how good" is this "good model", then we would never need to touch the finals data. 
+
+NOTE: Below is the distribution of the regular season questions' mean correct rate among finalists used to train the model.
+
+```{r}
+q3_df_scored_filtered %>% 
+  group_by(user_id) %>% 
+  ggplot(aes(x=mean_correct_of_q)) +
+  geom_histogram()
 ```
 
+### Question 4:
 
-### CHEATING QUESTION:
+Using your model from question 3, do you find compelling evidence that some players were cheating in the regular season?  What share of the players who qualified for the championship do you think cheated substantially in the regular season?  What’s your evidence?
 
-Therefore, even within the finalists, there are two groups that we need to consider: those who were eliminated halfway through (i.e. could not participate past the second round), and those who were not. Now, I will split the Finalists group into the two aforementioned components. In doing so, we can see exactly how different are the two groups. This will serve as a starting point for the question on whether or not there are cheaters. (4)
+### Response
+
+For the following question, I will define "Consistent Potential Cheaters" as those who have extremely high regular season scores (such as top 95 percentile), yet fall short in the finals (such as the bottom 5 percentile). 
+
+Another potential type of cheater where they may intentionally leave some points off, and thus balancing out their scores to seem like they are a "normal contestant". However, this could be a great point of analysis. if we assume that the question categories are given at random *TAKE A LOOK AT IT*, then it should be the case that these individuals would encounter different categories of questions randomly. However, we could potentially find individuals who are "overly balanced", where they seems to know roughly the same across every single category with minimal exceptions (i.e. a Econ buff that somehow has a 70% mean correctness in every single other category and with very small variance between each category) despite the mean correct rates within categories themselves (see question 1). 
+
+Since the question categories are completely random, and we have empirically seen that mean correct rates of different categories are different in distribution, and assuming that most people are **NOT** cheaters, then we might be able to detect potential cheaters in the data. In essence, it is simply leveraging whatever data that we have, that they might not have. 
+
+Of course, more "Clever Cheaters" would be much more dynamic, but this requires far more resources than what I am able to muster within a week. 
+
+Since we are **NOT** restricted to **ONLY** using the model from question 3, I will then build upon what I have already built in question 3 and combine the aforementioned "Over Balanced" idea to help further identify potential cheaters.
+
+Like most of this assignment game plan here follows a two-pronged approach: using my model from question 3, I will tag individuals who have a massive drop in performance during the finals season. Then, I will check if there are suspicious mean correct rates category-wise in the regular season for these individuals. If we see that these high performers in the regular season are "overly balanced", then we might have a potential cheater on our hands. 
+
+First to sniff out the first type of "Consistent Potential Cheaters". I will take a look at my model which took a look at 2018 data to see if there could be individuals who fit the criteria of a "Consistent Potential Cheater".
+
+```{r}
+q4_analysis <- as.data.frame(cbind(q3_test_filtered,verdicts_q3)) %>% 
+  rename(predicted_result=...9)
+
+q4_analysis_summarized <- q4_analysis %>% 
+  mutate(correct_prediction = ifelse(predicted_result==correct,1,0)) %>% 
+  relocate(predicted_result,.after=correct) %>% 
+  mutate(accuracy = ifelse(predicted_result==correct,1,0)) %>% 
+  group_by(id) %>% 
+  summarize(id_predictions = mean(accuracy)) %>% 
+  arrange(id_predictions)
+
+q4_analysis_summarized %>% 
+  ggplot(aes(x=id_predictions)) +
+  geom_histogram()
+
+
+```
+Just by looking at the individual predictions, we do have some individuals where we have failed to estimate their performance by quite a margin, where some missed the mark at less than 60%. Furthermore, it was calculated that the standard deviation of this distribution of accuracy for individuals was 0.0892, which means that there are few individuals who are around 2 standard diviations below the average. I will take these ids and check if they have any interesting charactoristics in the regular data.
+
+```{r}
+suspected_lst = c(10534,12043,2611,3657,3810,6900,11455,12166,12200)
+
+q4_regular_sus <- q3_df %>% 
+  filter(user_id %in% suspected_lst) %>% 
+  group_by(user_id,category) %>% 
+  mutate(mean_corr_of_cat_id = mean(correct)) %>% 
+  relocate(mean_corr_of_cat_id,.after=category) %>% 
+  arrange(user_id) %>% 
+  ungroup() %>%
+  group_by(category) %>%
+  mutate(mean_correct_of_cat_gen = mean(correct)) %>% 
+  select(user_id,category,mean_corr_of_cat_id,mean_correct_of_cat_gen) %>% 
+  distinct()
+  
+q4_regular_sus %>% 
+  gather(self_or_group,mean_score,mean_corr_of_cat_id:mean_correct_of_cat_gen) %>% 
+  mutate(self_or_group = case_when(self_or_group=="mean_corr_of_cat_id"~"self",
+                                   self_or_group=="mean_correct_of_cat_gen"~"group")) %>% 
+  ggplot(aes(x=as.factor(category),y=mean_score,color=as.factor(self_or_group))) +
+  geom_point() +
+  facet_wrap(~user_id)
+  
+```
+Amongst all the individuals, there is one who is very interesting. **ID number 12043 fulfills all the requirements for a potential cheater**, where not only did the prediction vastly mispredicted her abilities, but also that her correct rate among all categories seems up to par, if not very high. Therefore, it follows from my definitions that I have identified one "potential cheater" among the entire finalist sample by using the model constructed in question 3.
+
+However, I would argue that there is a better way of detecting cheaters, using the visualizations below, we might seek a new way:
+
+*CONTINUE HERE*
+
+As mentioned by the data description, even within the finalists, there are two groups that we need to consider: those who were eliminated halfway through (i.e. could not participate past the second round), and those who were not. Now, I will split the Finalists group into the two aforementioned components. In doing so, we can see exactly how different are the two groups. This will serve as a starting point for the question on whether or not there are cheaters. (4)
 
 ```{r}
 past_filter <- champions_df %>% 
@@ -561,6 +812,14 @@ joined_full_1819 %>%
 ```
 
 This is because the finals data does not distinguish based on category. Therefore, if we do a difference in means analysis, (assuming we may run the risk of claiming people that do not get. However, there is something interesting: it seems that in 2018, the finals and regulars were quite closely spaced together, yet for some reason, there seems to be a large jump in correct rate in the 2019 finals. However, the 2019 case is sort of what we expect! Since the championships select the best of the best, we definitely would expect some sort of difference in the mean_correct variable if the people at the finals were indeed better at taking questions on aggregate. This brings up the possibility: what if it is the case that people cheated more in 2018, and thus the correct rate of the "amateur" group in the regular season nearly matches the "pro" group who actually went to the finals? i.e. it is not necessarily that the finalists cheated (which should be interesting to check if finalists have relatively the same trend in regular and final situations), but it could the case that people **cheated more in 2018, but still could not make the finals**, and thus **inflating the correct rate?**
+
+### Question 5:
+
+Using whatever information we gave you, come up with your best prediction for the number of correct answers each player who qualified for the 2020 championship got correct in that championship. Describe your modeling choices. You will be graded based on the accuracy of your predictions.
+
+### Response: 
+
+In particular, for the finalists, I will assign different 'points' to finalists based on how difficult the question was (i.e. whether or not everyone else got a particular question wrong). These points will be given based on 10 bins of percentiles, i.e. getting one of the most difficult of the questions will net the individual 1 points, where as getting one of the most easy 20% of the questions will net the individual 1 point. Now to our analysis, I will train on the 2018 regular season data and test on the 2018 finals data.
 
 ```{r}
 
