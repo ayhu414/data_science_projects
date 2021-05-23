@@ -1,0 +1,401 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### Question 1:
+
+Build an OLS model on your cleaned version of houses_training_set. And then, making whatever adjustments you deem appropriate, provide your best prediction of the sales price for each house in houses_test_1. Describe your thought process and modeling choices.
+(Answer submissions should be contained in your .csv file with the first column being "parcel_number", the second being "sale_price", and the third being "question_1".)
+
+### Response:
+
+First, loading the data:
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+
+training_raw <- read_csv("houses_training_set.csv") %>% 
+  select(-X1)
+test1_raw <- read_csv("houses_test_set_1_new.csv") %>% 
+  select(-X1_1)
+test2_raw <- read_csv("houses_test_set_2_new.csv") %>% 
+  select(-X1_1)
+```
+
+Getting to know the data:
+
+Notes:
+
+  + 3 levels range from 1=poor to 3=good
+  + cabinet and plumbing separates into classes out of 99 
+    
+  + Parcel number should be unique
+  + sale_price shouldnt be negative 
+  + Lots of characteristic variables that don't make sense to add:
+    + floor_type and ceiling_type
+  + Absurd quantities in:
+    + t2nd_floor_area
+    + school_values
+    + total full bath
+
+Deed restrictions help to safeguard the long-term value to the community of the initial investment in affordable homeownership by limiting any subsequent sales of the home to income-eligible borrowers at an affordable price. The resale restrictions are attached to the property’s deed, and may be enforced for several decades or more, depending on state law. Deed restrictions typically prescribe a formula which sets a ceiling on the subsequent sales price of the home. As one example, the resale formula may be tied to changes in the area median income (https://www.localhousingsolutions.org/act/housing-policy-library/deed-restricted-homeownership-overview/deed-restricted-homeownership/)
+
+
+```{r}
+summary(test2_raw)
+
+unique(test2_raw$fuel_storage_proximity)
+
+training_raw %>% 
+  ggplot(aes(x=lot_size)) +
+  geom_histogram()
+
+training_raw %>% 
+  filter(lot_size>50000)
+
+training_raw %>% 
+  count(parcel_number)
+
+training_raw %>% 
+  filter(parcel_number == 71035206210)
+```
+It is worth noting that there is duplicate parcel_numbers values. Since I believe that a parcel number should be a unique identifier for property, assuming that the fact that there later sale dates for the same parcel number generally has an increasing price and that prices trend upwards over time for real estate, I believe that the most recent price would be must suitable for estimation as it already encapsulates past information. Therefore, I will filter out the past dates and only keep the most recent prices for a specific parcel number.
+
+From looking at the basic summary of all the datasets, I found that all the school number data have 999s for values. I do not believe that there is a reasonable explanation for this value, so in avoiding introducing my own biases into the data, I will go ahead and remove these values from the dataframes. To do this, I find that there is a huge gap between the number of reasonable values and the 999s, therefore, I will take a value cutoff at 900 to make the filter out this extreme outlier.
+
+Other absurd values lie in assessment area, where in all the data sets, there is a value of 6000+ as well as a 11 rows consisting of assessment_area of 5000+. While I believe that the removal of one single point in a data set consisting of 14500 observations initially will not distort our results, an argument can definitely be made that this one singular value has a missing decimal point. I would believe that this is the case, and include decimal points to all values that are significantly greater than the cluster of distributions around 100. I will use the 500 mark as a cut off, since the values in question are all 5000+, and include the missing decimal point. 
+
+Specific to the training data, we see that there are 50 counts with negative 99999s as well as 23 values of 0. I don't think that there is a valid explanation besides this was encoding missing data, therefore, I will remove these values in order to make sense of the data as a whole. There is also a quick item to note, which is that there are multiple columns where sale_price is 2600, 24 to be exact. However, other values in the data shows that they do in fact vary with respect to different characteristics, so I do not believe that they are necessarily duplicates.
+
+Looking at lot size, I see that there is an extreme outlive in the data at 16000+ sq feet within the training data, as well as multiple observations above 50000 for the 2nd testing data. For a home that is under $300,000, it would be extremely unlikely to have a yard that is more that 3 football fields large. Notice then that this causes our data to be skewed with a long right tail, and thus these outliers will have a significant impact on our predictive ability. Therefore I would argue that these outliers which lie beyond the 97.5 percentile above the mean should be removed. Furthermore, there is a very interesting part of the data which shows that the lot sizes are bimodally distributed, where it seems that there are two normal distributions stacked on top each other. This will require further diving into
+
+For the 2nd testing set. It is *possible* that there is some kind of mega mansion where the yard is huge, so removing them outright would be unsatisfactory. However, I would argue that even if this is the case, these values, amounting to 18 observations in total, will bring significant predictive contributions as a testing data set due to them being quite extreme outliers. Therefore, I have provided an argument which is to say that these 18 observations are quite extreme outliers in the testing data number 2, and while being different in sampling than the training and testing data 1, it is still too ridiculous of a value to have for testing purposes. 
+
+In the training data set, we have values of ground floors being 1 sqft, which is flat out ridiculous, as well as -999 for second floor areas, to be concrete, there is 1 value which does not make sense. In the test data 1, there are 4 entries that are evidently outliers which are removed from the distribution, and thus I will remove them accordingly to make a better overall prediction. Because I cannot make sense of this information (typos, different units etc.), I will remove it from the dataset. Notice that the zero values of additional levels (2+) are not of concern. I believe that this information encodes the fact that these properties do not have an additional levels.
+
+Now looking at street noise, railroad noise, and airport noise. I think it would be helpful to not only look at the training data frame by itself, but also in conjunction with testing data 2, since I would suspect that an increase in street noise would likely mean that the property is situated in a busy urban location, thus usually this would mean higher property prices. However, It seems that for all dataframes, the values are either 0 or 60 (61 or street and railroad noise). This really does not help at all with my thinking because the values are quite undecipherable. To avoid adding unsound arguments, I will forgo these variables for now.
+
+At this point, the main data cleaning is tentatively complete, where we actually see that most variables between test 1 and training share similar distributions (which is something that we expect). I will move on to the regression construction and conduct further cleaning should the issues arise.
+
+```{r}
+### CHECK PARCEL_NUMBER
+
+temp_train <- training_raw %>% 
+  group_by(parcel_number) %>% 
+  filter(sale_date == max(sale_date)) %>% 
+  ungroup()
+
+### REMOVING 999 IN SCHOOL DATA
+
+# temp_train <- temp_train %>% 
+#   filter(high_school_number < 900,
+#          middle_school_number < 900,
+#          elementary_school_number < 900)
+# 
+# temp_test1 <- test1_raw %>% 
+#   mutate(high_school_number = ifelse(high_school_number > 900,0,high_school_number),
+#          middle_school_number = ifelse(middle_school_number > 900,0,middle_school_number),
+#          elementary_school_number = ifelse(elementary_school_number > 900,0,elementary_school_number))
+# 
+# temp_test2 <- test2_raw %>% 
+#   mutate(high_school_number = ifelse(high_school_number > 900,0,high_school_number),
+#          middle_school_number = ifelse(middle_school_number > 900,0,middle_school_number),
+#          elementary_school_number = ifelse(elementary_school_number > 900,0,elementary_school_number))
+# 
+# temp_test1 %>% 
+#   ggplot(aes(x=ground_floor_area)) +
+#   geom_histogram()
+# 
+# temp_train %>% 
+#   group_by(elementary_school_number) %>% 
+#   summarize(n = n())
+
+### RESCALING ASSESSMENT_AREA
+
+# temp_train <- temp_train %>% 
+#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
+# 
+# temp_test1 <- temp_test1 %>% 
+#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
+# 
+# temp_test2 <- temp_test2 %>% 
+#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
+
+# test2_raw %>% 
+#   ggplot(aes(x=assessment_area)) +
+#   geom_histogram()
+
+### REMOVING -99999 AND 0 FROM TRAINING DATA SALES PRICE
+
+temp_train <- temp_train %>% 
+  filter(sale_price>0)
+
+### FILTERING PROPERTY AREAS
+
+temp_train <- temp_train %>% 
+  mutate(t2nd_floor_area = ifelse(t2nd_floor_area<0,0,t2nd_floor_area)) %>% 
+  filter(ground_floor_area>10)
+
+### CHECKING BATHROOM DISTR
+
+temp_train <- temp_train %>% 
+  filter(total_full_bath>=0)
+
+# temp_train %>% 
+#   ggplot(aes(x=railroad_noise)) +
+#   geom_histogram()
+# 
+# temp_train %>% 
+#   group_by(total_dining) %>% 
+#   summarize(n= n())
+# 
+# temp_test2 %>% 
+#   ggplot(aes(x=total_full_bath)) +
+#   geom_histogram()
+
+### CHANGING INTO FACTORS AND MAKING INTERACTIONS ON FLOORS
+
+temp_train <- temp_train %>% 
+  mutate(assessment_area = as.factor(assessment_area),
+         deed_restrictions = as.factor(deed_restrictions),
+         national_historic_district = as.factor(national_historic_district),
+         street_noise = as.factor(street_noise),
+         high_school_number = as.factor(high_school_number))  
+
+temp_test1 <- test1_raw %>% 
+  mutate(assessment_area = as.factor(assessment_area),
+         deed_restrictions = as.factor(deed_restrictions),
+         national_historic_district = as.factor(national_historic_district),
+         street_noise = as.factor(street_noise),
+         high_school_number = as.factor(high_school_number))  
+
+### TRNCATE OUTLIERS AND CREATING VALIDATION AND TRUE TRAINING SET
+
+temp_train <- temp_train %>% 
+  filter(sale_price >= quantile(temp_train$sale_price,0.02))
+
+smpl_size <- floor(0.8 * nrow(temp_train))
+
+set.seed(12)
+train_idx <- sample(seq_len(nrow(temp_train)), size = smpl_size)
+
+true_train <- temp_train[train_idx,]
+validation <- temp_train[-train_idx,]
+
+# ### TRUNCATE OUTLIERS
+# 
+# temp_train %>% 
+#   ungroup() %>% 
+#   summarize(max_price = max(sale_price),
+#             min_price = min(sale_price))
+# 
+# unique(temp_train$sale_price)
+
+```
+It is worth noting that I have also included an interaction 
+
+For the actual model, I believe that there are few variables that are truly significant in determining something as crucial as a real estate's value. In particular, instead of the granular information on how many windows it has, I believe that assessment area and living area (i.e. area of floors) are the main "intrinsic" properties which determine the price of a real estate. 
+
+However, that is not the whole story: after learning about how real estate is conventionally sold, it is the case that square footage is not the only fundamental determinant of prices, rather, increased "functionality" (i.e. bedrooms, washrooms etc.) are also extremely important to determine how 'valuable' is a piece of real estate. Lastly, it also should be the case that all else equal, a well-maintained home should be more "valuable" than a run-down home, hence I believe that conditions of the home should also be a factor when considering housing price as well as when the property is constructed. Therefore, I will use area, functionality, and quality to map out the "intrinsic" properties of a piece of real estate. (other bells and whistles such as additional luxuries, pools for example, will be considered later when estimating prices for luxury homes in the second test)
+
+Beyond "intrinsic" properties, and perhaps more importantly, the location of the real estate is extremely important. 
+
+It is the case that you can have an extremely luxurious mansion, but if its stuck in a sketchy neighborhood far from where you work, the willingness to pay for the property might not actually be as high as you would have expected. Furthermore while it would be helpful to get data such as local crime rates, mean incomes, and traffic to further estimate the environment/neighborhood of the property, we simply do not have that full set of data, and we are stuck with whatever "external" data that we have. In particular, I believe that number of schools as a starting point could be helpful in measuring the environment of the neighborhood. This is because access to education often signifies increased school spending in that area, and as research conducted by Barrow et al. (https://www.nber.org/digest/jan03/school-spending-raises-property-values), has a positive effect on per pupil housing values. Furthermore, schools can also serve as a proxy for community stability, as often times amenities (such as basic infrastructure like sewers and clean water, and as well as policing) will be supplied to schools, which should have a positive effect on real estate prices relative to those in less stable communities. (If we also had data on the *quality* of the school rather than the quantity, our estimates would be better as per the Brookings Institute: https://www.brookings.edu/research/housing-costs-zoning-and-access-to-high-scoring-schools/).
+
+Lastly, I believe that housing in "special districts" will also be quite important to consider, as it is usually the case that areas with historical significance will positively contribute to sales prices (such as UPC in Hyde Park, where the facilities are not the best, but still cost quite a lot due to it being designed by the same person who designed the Leo),or other 
+
+But nevertheless, let us look at the entire data frame first for the sake of completion 
+
+```{r}
+library(corrplot)
+library(RColorBrewer)
+
+M_df <- temp_train %>% 
+  select(-deed_restrictions,-national_historic_district,-flood_plain,-fuel_storage_proximity,-parcel_number) %>% 
+  mutate_if(is.character,as.factor) %>% 
+  mutate_if(is.factor,as.numeric)
+
+corr_plain <- cor(M_df)
+corr_plain[lower.tri(corr_plain,diag=TRUE)] <- NA
+corr_plain[corr_plain == 1] <- NA
+
+corr_plain <- as.data.frame(as.table(corr_plain))
+
+corr_plain <- corr_plain %>% 
+  filter(abs(Freq)>0.3) %>% 
+  arrange()
+
+M_corr_df <- reshape2::acast(corr_plain,Var1~Var2,value.var="Freq")
+
+corrplot(M_corr_df, is.corr=FALSE, tl.col="black", na.label=" ",col=brewer.pal(n=8, name="RdYlBu"))
+         
+```
+
+The graph is kinda hideous, so for now lets just run with the regression:
+
+The first regression will start out simple, I will only consider the main components stated above, i.e. the intrinsic size of the property (areas) and access to external amenities (proxy by schools). 
+
+```{r}
+
+ass_fixeff_lm <- 
+  lm(data = true_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + inside_condition + outside_condition + plumbing_class + central_air + national_historic_district + street_noise + as.factor(high_school_number))
+
+summary(ass_fixeff_lm)
+
+## consider quality, year, 
+```
+
+Here, we have quite a significant and intuitive result when looking at the model at hand. For each square ft increase in assessment area and living area (floor areas), we see a statistically significant increase in housing price. Furthermore, we see that this number makes economic sense as well, as a quick Google search shows that in the Midwest, average cost per square foot is around \$106.79. This value is sure to be lower in our analysis because we have added additional covariates to explain real estate prices. A quick note is that we see additional floors are generally more expensive per square ft than the ground floor, which also makes intuitive sense. The only interesting finding is that dining rooms are insignificantly different from zero, with a point estimate of negative $\$1277$ and S.E. of $\$6445$. This is quite surprising and does not make any intuitive sense what so ever, as we would expect housing with no kitchens to be worth much less than housing with at least one kitchen. My explanation for this could be the fact that almost every single entry has at least 1 kitchen, and there are only 32 out of 13663 entries in the cleaned training data that does not have a kitchen value of 1. Therefore, it could very likely be the case that the "unpredictiveness" of the kitchen variable is due to the fact that practically every single entry has at exactly the same value. Lastly, it should be noted that price is also positively increasing with respect to construction year, which makes sense since more recent property are generally in a better condition than property that has been standing for 100 years, regardless of how many "renovations" that had been conducted. 
+
+Now looking at the 'external' factors combined with square footage, I have selected the access to schools for this analysis. By looking at availability of schools, we see that middle schools and high schools have a positive and statistically significant result, where access to one additional middle school raises prices by $\$79.26$, where as high school raises prices by a (quite large) value of around $\$3743$. Furthermore, as expected, we see that property in a national historic district has a positive effect on price by a factor of $\$35850$. In the end, this model has an $R^2$ of around 0.7697. 
+
+Now onto a predicting sample with the "validation" set
+
+```{r}
+validation$ols_pred <- predict(ass_fixeff_lm, validation)
+
+validation <- validation %>% 
+  group_by(parcel_number) %>% 
+  mutate(error = ols_pred-sale_price) %>% 
+  arrange(-desc(abs(error))) %>% 
+  ungroup()
+
+validation %>% 
+  summarize(mse=(mean(error^2)))
+
+extreme_overshot_parcels<- as.vector(c(validation %>% 
+  filter(ols_pred>175000 & sale_price<100000) %>% 
+  summarize(parcel_number=parcel_number)))
+
+comp <- c(71034106023,71034102055)
+full <- c(60803103188,60803104087,60803105176,60811107106,60811112197,71011112077,71034106023,71035205098,71035206210,71035208026,71035208034,71034102055)
+
+validation %>%
+  filter(parcel_number %in% comp) %>%
+  relocate(sale_price,ols_pred,error,)
+val_lm <- lm(data=validation, sale_price ~ ols_pred)
+
+summary(val_lm)
+
+validation %>% 
+  ggplot(aes(x=sale_price,y=ols_pred)) +
+  geom_point()
+
+validation %>% 
+  ggplot(aes(x=ols_pred))+
+  geom_density()
+
+# validation <- validation %>% 
+#   mutate(ols_pred_scaled = mean(ols_pred)) %>% 
+#   mutate(ols_pred_scaled = ols_pred_scaled*0.5 + mean(ols_pred))
+
+# validation %>% 
+#   summarize(rmse_scaled=sqrt(mean((sale_price - ols_pred_scaled)^2)))
+
+
+```
+
+In looking through our validations, there are a few odd pieces of data that is quite interesting. First of all, a regression between the true price and the predicted price has a coefficient point estimate on the prediction of 0.989, which means that our predictions itself does not overestimating or underestimating the prices systematically. However, it does seem that the $R^2$ value is slightly lower, at around 0.7255, which means that there is indeed quite a lot of variation in our predictions, and that our predictions are quite sensitive to small changes. A manual fix would be to manually decrease the standard deviation on the predctions
+
+```{r}
+temp_test1 <- test1_raw %>% 
+  mutate(high_school_number = as.factor(high_school_number),
+         street_noise = as.factor(street_noise),)
+
+temp_test1$ols_pred <- predict(ass_fixeff_lm,temp_test1)
+
+unique(temp_test1$high_school_number)
+```
+
+
+In the end, we are able to get a RMSE of 33204.94 on our in-sample predictions with the model that has a R^2 value of 0.7255. The estimations given for the testing dataset is exported as "XXXXXXXXXXXXXXXXXXX.csv".
+
+### Question 2
+
+Build a RANDOM FOREST model on your cleaned version of houses_training_set. And then, making whatever adjustments you see fit, provide your best prediction of the sales price for each house in houses_test_1. Describe your thought process and modeling choices. 
+
+### Response:
+
+Building the random forest model, we will use whatever insight that was obtained previously to proceed with the model. Before we start, it is worthwhile to note that random forest models inherently has variable selection, which to some extent removes the requirement for my own judgment. However, I think it would not be idea if we just let the model do whatever it wants. To address this fully, I will experiment with different model specifications and provide the most sensable model as my final result. In doing so, I am able to (at least) get some sense as to what is going on behind the scenes and comment on the way.
+
+```{r}
+library(randomForest)
+library(reshape2)
+# 
+# true_train <- true_train %>% 
+#   mutate(street_noise = as.integer(street_noise),
+#          street_noise = ifelse(street_noise>0,1,0),
+#          national_historic_district = as.integer(national_historic_district),
+#          national_historic_district = ifelse(national_historic_district>0,1,0),
+#          high_school_number = as.factor(high_school_number))
+
+# validation <- validation %>% 
+#   mutate(street_noise = as.integer(street_noise),
+#          street_noise = ifelse(street_noise>0,1,0),
+#          national_historic_district = as.integer(national_historic_district),
+#          national_historic_district = ifelse(national_historic_district>0,1,0),
+#          high_school_number = as.factor(high_school_number))
+
+rf_model <- randomForest(data = true_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + inside_condition + outside_condition + plumbing_class + central_air + national_historic_district + street_noise + high_school_number, mtry = 7, importance = TRUE)
+
+summary(rf_model)
+
+validation$rf_pred <- predict(rf_model,validation)
+
+validation %>% 
+  mutate(error_rf = rf_pred - sale_price) %>% 
+  relocate(parcel_number,sale_price,ols_pred,rf_pred,error,error_rf) %>% 
+  summarize(mse=(mean(error^2)),
+            mse_rf=(mean(error_rf^2)))
+
+val_lm_rf <- lm(data=validation,sale_price ~ rf_pred)
+summary(val_lm_rf)
+
+validation %>% 
+  ggplot(aes(x=sale_price,y=rf_pred)) +
+  geom_point()
+
+validation %>% 
+  ggplot(aes(x=sale_price,y=ols_pred)) +
+  geom_point()
+
+graphing <- melt(validation, id.vars='parcel_number',variable.name='series')
+
+validation %>% 
+  ggplot(aes(x=ols_pred)) +
+  geom_density() +
+  labs(title="OLS PREDICTION VALIDATION")
+
+validation %>% 
+  ggplot(aes(x=rf_pred)) +
+  geom_density() +
+  labs(title="RF PREDICTION VALIDATION")
+
+validation %>% 
+  ggplot(aes(x=sale_price)) +
+  geom_density() +
+  labs(title="TRUE SALES")
+
+validation %>% 
+  summarize(max_price=max(ols_pred),
+            min_price=min(ols_pred))
+```
+
+After tuning the model, we have arrived at a good MSE value for RF at mtry = 7. Now, we can make a clear comparison between the MSE of OLS estimates and MSE of RF estimates from the same true testing set and the validation set. In particular, we have MSE of OLS = 504955456, whereas the MSE of RF = 422754957. This shows that the RF performs better than the OLS when testing against our validation set. It is of course important to note that these values will differ from different samplings of true training sets and validation sets. However, it is a good way to measure how well we are doing with the models and tune them accordingly. Now, to make the predictions for the first set of testing data using the RF model
+
+```{r}
+temp_test1$rf_pred <- predict(rf_model,temp_test1)
+
+temp_test1 %>% 
+  ggplot(aes(x=rf_pred)) +
+  geom_density()
+
+temp_test1 %>% 
+  ggplot(aes(x=ols_pred)) +
+  geom_density()
+```
+
+
