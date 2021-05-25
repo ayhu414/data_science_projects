@@ -88,46 +88,6 @@ temp_train <- training_raw %>%
   filter(sale_date == max(sale_date)) %>% 
   ungroup()
 
-### REMOVING 999 IN SCHOOL DATA
-
-# temp_train <- temp_train %>% 
-#   filter(high_school_number < 900,
-#          middle_school_number < 900,
-#          elementary_school_number < 900)
-# 
-# temp_test1 <- test1_raw %>% 
-#   mutate(high_school_number = ifelse(high_school_number > 900,0,high_school_number),
-#          middle_school_number = ifelse(middle_school_number > 900,0,middle_school_number),
-#          elementary_school_number = ifelse(elementary_school_number > 900,0,elementary_school_number))
-# 
-# temp_test2 <- test2_raw %>% 
-#   mutate(high_school_number = ifelse(high_school_number > 900,0,high_school_number),
-#          middle_school_number = ifelse(middle_school_number > 900,0,middle_school_number),
-#          elementary_school_number = ifelse(elementary_school_number > 900,0,elementary_school_number))
-# 
-# temp_test1 %>% 
-#   ggplot(aes(x=ground_floor_area)) +
-#   geom_histogram()
-# 
-# temp_train %>% 
-#   group_by(elementary_school_number) %>% 
-#   summarize(n = n())
-
-### RESCALING ASSESSMENT_AREA
-
-# temp_train <- temp_train %>% 
-#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
-# 
-# temp_test1 <- temp_test1 %>% 
-#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
-# 
-# temp_test2 <- temp_test2 %>% 
-#   mutate(assessment_area=ifelse(assessment_area>500,assessment_area/100,assessment_area))
-
-# test2_raw %>% 
-#   ggplot(aes(x=assessment_area)) +
-#   geom_histogram()
-
 ### REMOVING -99999 AND 0 FROM TRAINING DATA SALES PRICE
 
 temp_train <- temp_train %>% 
@@ -144,19 +104,7 @@ temp_train <- temp_train %>%
 temp_train <- temp_train %>% 
   filter(total_full_bath>=0)
 
-# temp_train %>% 
-#   ggplot(aes(x=railroad_noise)) +
-#   geom_histogram()
-# 
-# temp_train %>% 
-#   group_by(total_dining) %>% 
-#   summarize(n= n())
-# 
-# temp_test2 %>% 
-#   ggplot(aes(x=total_full_bath)) +
-#   geom_histogram()
-
-### CHANGING INTO FACTORS AND MAKING INTERACTIONS ON FLOORS
+### CHANGING INTO FACTORS
 
 temp_train <- temp_train %>% 
   mutate(assessment_area = as.factor(assessment_area),
@@ -172,14 +120,22 @@ temp_test1 <- test1_raw %>%
          street_noise = as.factor(street_noise),
          high_school_number = as.factor(high_school_number))  
 
+temp_test2 <- test2_raw %>% 
+  mutate(assessment_area = as.factor(assessment_area),
+         deed_restrictions = as.factor(deed_restrictions),
+         national_historic_district = as.factor(national_historic_district),
+         street_noise = as.factor(street_noise),
+         high_school_number = as.factor(high_school_number))  
+
 ### TRNCATE OUTLIERS AND CREATING VALIDATION AND TRUE TRAINING SET
+
+set.seed(12)
 
 temp_train <- temp_train %>% 
   filter(sale_price >= quantile(temp_train$sale_price,0.02))
 
 smpl_size <- floor(0.8 * nrow(temp_train))
 
-set.seed(12)
 train_idx <- sample(seq_len(nrow(temp_train)), size = smpl_size)
 
 true_train <- temp_train[train_idx,]
@@ -241,7 +197,7 @@ The first regression will start out simple, I will only consider the main compon
 ```{r}
 
 ass_fixeff_lm <- 
-  lm(data = true_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + inside_condition + outside_condition + plumbing_class + central_air + national_historic_district + street_noise + as.factor(high_school_number))
+  lm(data = true_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + inside_condition + outside_condition + plumbing_class + central_air + national_historic_district + street_noise + high_school_number)
 
 summary(ass_fixeff_lm)
 
@@ -256,6 +212,7 @@ Now onto a predicting sample with the "validation" set
 
 ```{r}
 validation$ols_pred <- predict(ass_fixeff_lm, validation)
+true_train$ols_pred <- predict(ass_fixeff_lm, true_train)
 
 validation <- validation %>% 
   group_by(parcel_number) %>% 
@@ -265,6 +222,10 @@ validation <- validation %>%
 
 validation %>% 
   summarize(mse=(mean(error^2)))
+
+true_train %>% 
+  summarize(mse=(mean((ols_pred - sale_price)^2)))
+  
 
 extreme_overshot_parcels<- as.vector(c(validation %>% 
   filter(ols_pred>175000 & sale_price<100000) %>% 
@@ -298,20 +259,17 @@ validation %>%
 
 ```
 
-In looking through our validations, there are a few odd pieces of data that is quite interesting. First of all, a regression between the true price and the predicted price has a coefficient point estimate on the prediction of 0.989, which means that our predictions itself does not overestimating or underestimating the prices systematically. However, it does seem that the $R^2$ value is slightly lower, at around 0.7255, which means that there is indeed quite a lot of variation in our predictions, and that our predictions are quite sensitive to small changes. A manual fix would be to manually decrease the standard deviation on the predctions
+In looking through our validations, there are a few odd pieces of data that is quite interesting. First of all, a regression between the true price and the predicted price has a coefficient point estimate on the prediction of 0.989, which means that our predictions itself does not overestimating or underestimating the prices systematically. Particular for our validation set, after we have tuned the model, we have obtained a MSE of 499866765, and the distribution of the estimated prices are also given below as a sanity check (see if there are extreme values in our predictions). Finally, we move on to the predictions of the first testing set.
 
 ```{r}
-temp_test1 <- test1_raw %>% 
-  mutate(high_school_number = as.factor(high_school_number),
-         street_noise = as.factor(street_noise),)
-
 temp_test1$ols_pred <- predict(ass_fixeff_lm,temp_test1)
 
-unique(temp_test1$high_school_number)
+q1_otpt <- temp_test1 %>% 
+  select(parcel_number, ols_pred)
+
 ```
 
-
-In the end, we are able to get a RMSE of 33204.94 on our in-sample predictions with the model that has a R^2 value of 0.7255. The estimations given for the testing dataset is exported as "XXXXXXXXXXXXXXXXXXX.csv".
+The estimations given for the testing dataset is exported as "XXXXXXXXXXXXXXXXXXX.csv".
 
 ### Question 2
 
@@ -384,7 +342,8 @@ validation %>%
             min_price=min(ols_pred))
 ```
 
-After tuning the model, we have arrived at a good MSE value for RF at mtry = 7. Now, we can make a clear comparison between the MSE of OLS estimates and MSE of RF estimates from the same true testing set and the validation set. In particular, we have MSE of OLS = 504955456, whereas the MSE of RF = 422754957. This shows that the RF performs better than the OLS when testing against our validation set. It is of course important to note that these values will differ from different samplings of true training sets and validation sets. However, it is a good way to measure how well we are doing with the models and tune them accordingly. Now, to make the predictions for the first set of testing data using the RF model
+After tuning the model, we have arrived at a good MSE value for RF at mtry = 7. Now, we can make a clear comparison between the MSE of OLS estimates and MSE of RF estimates from the same true testing set and the validation set. In particular, we have MSE of OLS = 499866765, whereas the MSE of RF = 422754957 This shows that the RF performs better than the OLS when testing against our validation set. It is of course important to note that these values will differ from different samplings of true training sets and validation sets. However, it is a good way to measure how well we are doing with the models and tune them accordingly. Now, to make the predictions for the first set of testing data using the RF model
+
 
 ```{r}
 temp_test1$rf_pred <- predict(rf_model,temp_test1)
@@ -396,6 +355,312 @@ temp_test1 %>%
 temp_test1 %>% 
   ggplot(aes(x=ols_pred)) +
   geom_density()
+
+validation %>% 
+  ggplot(aes(x=rf_pred)) +
+  geom_density()
+
+validation %>% 
+  ggplot(aes(x=ols_pred)) +
+  geom_density()
+
+q2_otpt <- temp_test1 %>% 
+  select(parcel_number,rf_pred)
 ```
 
+The final file is given as "XXXXXXXXXX.csv"
 
+### QUESTION 3:
+
+Using whatever modeling approach and whatever adjustments you deem appropriate, provide your best prediction of the sales price in houses_test_2.  Describe your thought process and modeling choices. NOTE: you have to be thoughtful here!! 
+
+### Response:
+
+There are two things that we have to consider when doing this part. 
+
+  + $300,000+ Sale price homes are now included
+  
+  + 2 or fewer full bathrooms are now included
+  
+Therefore, we must somehow take into consideration how these two factors will affect our estimations. First checking the distribution of full bathrooms vs. the training set...
+
+```{r}
+
+temp_test2 %>% 
+  ggplot(aes(x=total_full_bath)) +
+  geom_histogram()
+
+temp_train %>% 
+  ggplot(aes(x=total_full_bath)) +
+  geom_histogram()
+
+temp_test2 %>% 
+  ggplot(aes(x=high_school_number)) +
+  geom_bar()
+
+temp_train %>% 
+  ggplot(aes(x=high_school_number)) +
+  geom_bar()
+
+temp_train %>% 
+  ggplot(aes(x=national_historic_district)) +
+  geom_bar()
+
+temp_test2 %>% 
+  ggplot(aes(x=national_historic_district)) +
+  geom_bar()
+
+temp_train %>% 
+  ggplot(aes(x=sale_date)) +
+  geom_histogram()
+
+temp_test2 %>% 
+  ggplot(aes(x=sale_date)) +
+  geom_histogram()
+
+unique(temp_test2$street_noise)
+```
+
+Indeed, we see that most of the full bathroom in the second testing set is centered around 3 bathrooms, which we cannot estimate directly from the training set. However, recall that in our OLS method, we did not use this data as a factor (fixed effect), and treated it linearly. This makes sense because it is common in the real estate circle to use the amount of full bathrooms to estimate how luxurious a property is (if a smaller bathroom will do this trick, having a full bathroom is simply for luxury), therefore, the OLS method seems to have a better chance at predicting correctly relative to RF methods. Furthermore, since we know that the second testing set has either more bathrooms OR has its value at $300,000, we can almost say for certain that there will be necessity to tune the OLS model to account for the higher-price housing. 
+  
+Exploring the data of our indicated set of variables supports our "luxury" assumption. By checking the key groups of factors: intrinsic and external, we see that distribution of area of property in the 2nd testing set is shifted to the right and has a thicker right tail, indicating an increase in larger homes. They have more garages, increased quality class, higher AMP ratings. However, at the same time test set 2 has similar inside and outside conditions, similar central air, and similar sale dates. However, I think that to expand and correctly estimate luxury homes, we should include more variables considering "non-essential" characteristics, such as fireplace openings.
+
+Essentially, it is as if we are blind to the "luxurious data" and we are estimating their property using only information that we see in our normal lives. This intuitively means that what might be considered "valuable" for us, such as good plumbing, might be completely an after thought in higher-end housing since it is already become a "given" for them. It is **not** the case that they pay "less" for the basic amenities, but it should be the case that the *bulk of their value comes from somewhere else* that we do not observe clearly in our "non-luxurious" data. Therefore, if we are to only look at our training data, it is almost for sure that we will be underestimating their housing prices, since it is as if "good pluming" is the limit of determining value and completely oblivious to the value given by, say, a backyard tennis court. In this light, I think a good way to account for this shift is to make a "shift" parameter which adjusts our biases in the predictions **OVERALL**.
+
+On the other hand, we have cases where housing with 2 or less bathrooms are included in the data, which means that these must be priced \$300,000 or *HIGHER*. On the other hand, we could also possibly have cases where properties have high full bathrooms, but possibly priced *LOWER* than \$300,000. This would mean that our full bathroom point estimate is quite unreliable. While it is true that in our previous testing that full bathroom is a great predictor of price, our new data is definitely going to skew the point estimate on the full bathroom variable. In the case where we have introduced housing that has \$300,000 price and yet lower full bathroom counts, this would mean that our predictor of full bathroom would increase, whereas the case where we have introduced housing that has less than \$300,000 but higher full bathrooms, the predictor of full bathroom would decrease. 
+
+While one possible way to address this problem is to lump the two variables together. However, since I have checked that the two variables are independent (by checking their interaction terms), lumping the two variables into a joint "bathroom" effect would not be a sound procedure as we are basically saying two full bathrooms have the same effect on price as two half bathrooms.
+
+Therefore, the best thing that we can do model wise is to work with our OLS assumptions that even in the situations where we have out-of-bounds data, our growth is expected to be linear in nature. However, there are much more things we can do to our training data to make sure that the training data distributions fits the testing data as much as possible, and thinking of a good way to measure the effect of full baths without directly using the variable. (use the proportion of full baths in a house?)
+
+To do this, I will split the training data into two segments: "high-cost" housing and "normal" housing. This is to replicate the situation we have here with test set 2. Then I will list a bunch of assumptions to make our logic consistent with our model. After constructing our model, I will go ahead and create the shift parameter which measures our inherent bias in predictions, and use this constructed parameter as a hyper parameter (i.e. something we choose ourselves) to tune our predictions accordingly.
+
+Therefore, we need to find a subset of the training set to mimic the second testing data as much as possible, so that we are using a representative (as possible) sample to train our model.
+
+```{r}
+# FINDING A "SIMILAR" DISTRIBUTION OF CHARACTERISTICS 
+
+
+q50 <- quantile(temp_train$sale_price,0.5)
+q70 <- quantile(temp_train$sale_price,0.7)
+
+q3_test <- temp_train %>% 
+  filter(sale_price>200000)
+
+q3_train <- temp_train %>% 
+  filter(sale_price<200000)
+
+temp_train %>% 
+  group_by(total_full_bath) %>% 
+  summarize(mean=mean(sale_price),
+         sd=sd(sale_price))
+
+192785.0/154735.3
+43986.84/41138.27
+
+temp_train %>% 
+  filter(total_full_bath==2) %>% 
+  ggplot(aes(x=sale_price)) +
+  geom_histogram()
+
+gp1 <- temp_train %>% 
+  filter(sale_price>q70) %>%
+  select(parcel_number,total_full_bath,plumbing_class)
+  
+gp1 <- melt(gp1,id.vars="parcel_number")
+
+gp1 %>% 
+  ggplot(aes(x=value,color=variable)) +
+  geom_histogram(position="dodge")
+
+gp2 <- temp_test2 %>% 
+  select(parcel_number,total_full_bath,plumbing_class)
+  
+gp2 <- melt(gp2,id.vars="parcel_number")
+
+gp2 %>% 
+  ggplot(aes(x=value,color=variable)) +
+  geom_histogram(position="dodge")
+
+temp_train %>% 
+  filter(plumbing_class>6) %>% 
+  ggplot(aes(x=total_full_bath)) +
+  geom_bar()
+
+temp_test2 %>% 
+  filter(plumbing_class>0) %>% 
+  ggplot(aes(x=total_full_bath)) +
+  geom_bar()
+
+temp_train %>% 
+  group_by(total_full_bath) %>% 
+  summarize(mean = mean(sale_price),
+            sd = sd(sale_price),
+            n = n()) %>% 
+  ungroup() %>% 
+  mutate(ratio_mean = 193183.7/157082.4,
+         ratio_sd = 43594.70/39940.12)
+
+temp_test2 %>% 
+  ggplot(aes(x=total_full_bath)) +
+  geom_histogram()
+
+temp_train %>% 
+  ggplot(aes(x=ground_floor_area)) +
+  geom_density()
+
+temp_test2 %>% 
+  ggplot(aes(x=ground_floor_area)) +
+  geom_density()
+```
+
+Here, we have taken an arbitrary cut off to mimic the situation where we must use the full training data to approximate the testing set 2. Doing so allows us to investigate a few aspects of our model which will be useful in approximating. Specifically, we are told that our data is *biased* in terms of pricing, as well as the variable on full bathrooms are *out-of-bounds* in the testing data relative to our training data. Therefore, the aspects that we are trying to estimate in our "mock test" is:
+
+  + to what degree are the estimates biased in terms of sales price on a whole, and thus coming up with a so called "shift parameter"
+  
+  + to what extent do increased full bathrooms change the distribution in sale prices, and thus coming up with a "distribution multipliers" for each extra full bathroom
+  
+Needless to say, we have some key assumptions when using these values. In tuning the model, we are making the following assumptions:
+
+  + the training data set's properties are "less-luxurious" than the second testing set's data in terms of prices and full bathrooms
+  + between the two data sets, point estimates on fundamental characteristics are still relatively the same (i.e. going from 500 sqft to 501 sqft increases the value of any property by a similar amount, all else equal, between the two sets of data)
+  + **the bias caused by predicting "more-luxurious" housing and "less-luxurious" housing is relatively consistent across groups of property with similar characteristics (shift parameter)**
+  + **additional functionality provided by additional bathrooms contribute to a change in prices by a relatively consistent ratio in terms of distributions' mean and standard deviations (distribution multipliers)**
+
+Running some tests in our "mock test", we find that our OLS estimates using the training data below the arbitrary cut offs is systematically underestimating the prices, where the true prices are on average 1.2x times higher than our predicted results for multiple cutoffs, meaning that our shift parameter should be around 1.2x. Looking at the distributions of prices between 1 full bathroom vs 2 full bathrooms, we find that the mean of 2 full bathrooms is 1.25x higher than the mean for 1 full bathroom, and the standard deviation is 1.07x higher in terms of standard deviation, meaning that these two values will provide the distribution multipliers 1.25 for the mean and 1.07 for the standard deviation. However, it is also worth noting that even after all this tuning, if we find cases where full bathrooms < 2 AND sale price < /$300,000, it would mean that we would of course be incorrect since this data would have never even appeared in our testing set 2. Therefore, I will set these values to \$300,000 as it is the lowest (and thus closest value to our estimation) value which satisfies the conditions on our test set 2.
+
+Therefore, we will be using these parameters to first estimate the entire testing set 2 using OLS. Then, I will consider the overall bias and shift the predicted prices by 1.2x. Then, I will have to consider the distributions of prices for each amount of full bathrooms to see if anything is needed in terms of the distribution, and apply our distribution multipliers accordingly. Finally, I will consider the items where it would have never existed in the testing set 2 and rescale their estimations to /$300,000 to comply with the data description
+
+```{r}
+test2_raw %>%
+  mutate(total_bath = total_full_bath + total_half_bath) %>% 
+  ggplot(aes(x=total_bath)) +
+  geom_histogram()
+
+temp_train %>% 
+  mutate(total_bath = total_full_bath + total_half_bath) %>% 
+  ggplot(aes(x=total_bath)) +
+  geom_histogram()
+
+## AGGREGATING FULL BATHROOM DATA
+
+test_q3_lm <-
+  lm(data = q3_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + + central_air + national_historic_district + street_noise + high_school_number + fireplace_openings + parcel_view + traffic + floor_types_1_and_2 + effective_yr)
+
+q3_lm <-
+  lm(data = temp_train, sale_price ~ ground_floor_area + t2nd_floor_area + t3rd_floor_area + finished_basement_area + finished_attic_area + additions_area + total_full_bath + total_half_bath + total_dens + total_kitchens + total_dining + amp_rating + sale_date + stalls_garage_1 + stalls_garage_2 + quality_class + + central_air + national_historic_district + street_noise + high_school_number + fireplace_openings + parcel_view + traffic + floor_types_1_and_2 + effective_yr)
+
+test_all_q3 <-
+  lm(data = q3_train, sale_price ~.)
+
+summary(test_q3_lm)
+summary(q3_lm)
+
+q3_test$ols_pred <- predict(test_q3_lm,q3_test)
+temp_test2$ols_pred <- predict(q3_lm,temp_test2)
+
+val_lm_q3 <- lm(data=q3_test,sale_price ~ ols_pred)
+
+temp_test2 %>% 
+  ggplot(aes(x=ols_pred)) +
+  geom_histogram()
+
+summary(val_lm_q3)
+
+q3_test %>% 
+  ggplot(aes(x=sale_price,y=ols_pred)) +
+  geom_point()
+
+q3_test <- q3_test %>% 
+  mutate(diff = sale_price-ols_pred) %>% 
+  ungroup() %>% 
+  mutate(mean_diff = mean(diff)) %>% 
+  mutate(shift_param = mean_diff/mean(ols_pred)) %>% 
+  relocate(parcel_number,sale_price,diff,mean_diff,shift_param) %>% 
+  ##SHIFTING TO ADJUST FOR THE SYSTEMATIC BIAS IN OUR SAMPLE (1.2)
+  mutate(shifted_pred = ols_pred + 0.2*ols_pred)#scaling to consider the unobserved factors of price 
+  ##DO THE PERCENT SHIFT INCREMENTLY ON EACH SUB CATEGORY OF BATHROOMS (IN TESTING: 200,000)
+
+  # mutate(fb2 = total_full_bath==2) %>%
+  # group_by(fb2) %>%
+  # mutate(mean_fb2 = mean(sale_price),
+  #        sd_fb2 = sd(sale_price)) %>%
+  # ungroup() %>%
+  # mutate(normal_pred = ifelse(total_full_bath>=2,((((shifted_pred - mean_fb2)/sd_fb2)*45615)+mean_fb2),shifted_pred))
+
+temp_test2_small <- temp_test2 %>% 
+  mutate(shifted_pred = 1.2*ols_pred) %>% 
+  relocate(parcel_number,ols_pred,shifted_pred) %>% 
+  select(parcel_number,ols_pred,total_full_bath,shifted_pred)
+
+temp_test2_small %>% 
+  ggplot(aes(x=ols_pred,color=as.factor(total_full_bath))) +
+  geom_density()
+
+gpt2 <- melt(temp_test2,id.vars="parcel_number")
+
+gpt2 %>% 
+  ggplot(aes(x=value,color=variable)) +
+  geom_density()
+
+temp_test2_small %>% 
+  group_by(total_full_bath) %>% 
+  summarize(m=mean(shifted_pred),
+            sd=sd(shifted_pred))
+
+temp_test2_small <- temp_test2_small %>% 
+  mutate(normal_price=case_when(total_full_bath==1 ~ shifted_pred,
+                                total_full_bath==2 ~ shifted_pred,
+                                total_full_bath==3 ~ (1.06*42538.72)*(shifted_pred - 283736.5)/61715.31 + (1.25*329909.8),
+                                total_full_bath==4 ~ (1.06*61715.31)*(shifted_pred - 386751.3)/67979.43 + (1.25*283736.5),
+                                total_full_bath==5 ~ (1.06*67979.43)*(shifted_pred - 453695.0)/50330.99 + (1.25*386751.3),
+                                total_full_bath==6 ~ (shifted_pred - 503841.9) + (1.25*453695.0)))
+
+temp_test2_small_gp <- temp_test2_small %>% 
+  mutate(normal_price = ifelse(normal_price<300000 & total_full_bath<2,300000,normal_price)) %>% 
+  select(parcel_number,ols_pred,shifted_pred,normal_price)
+
+temp_test2_small %>% 
+  ggplot(aes(x=normal_price,color=as.factor(total_full_bath))) +
+  geom_density()
+
+gpt3 <- melt(temp_test2_small_gp,id.vars="parcel_number")
+
+gpt3 %>% 
+  ggplot(aes(x=value,color=variable)) +
+  geom_density()
+
+temp_test2_small %>% 
+  ggplot(aes(x=normal_price)) %>% 
+  geom_density
+
+graphing <- q3_test %>% 
+  select(parcel_number,sale_price,ols_pred,low_bathroom_pred,shifted_pred)
+
+graphing <- melt(graphing,id.vars="parcel_number")
+
+graphing %>% 
+  ggplot(aes(x=value,color=variable)) +
+  geom_density()
+
+q3_test %>% 
+  ggplot(aes(x=sale_price,y=shifted_pred)) +
+  geom_point()
+
+val_lm_q3 <- lm(data=q3_test,sale_price ~ shifted_pred)
+
+summary(val_lm_q3)
+
+q3_test %>% 
+  ungroup() %>% 
+  summarize(mse_ols = mean(diff^2),
+            mse_shft = mean((shifted_pred-sale_price)^2),
+            mse_norm = mean((normal_pred-sale_price)^2),
+            mse_rescaled = mean((rescaled_predictions-sale_price)^2))
+
+746892718/1375386176
+
+temp_train %>% 
+  summarize(sd = sd(sale_price))
+```
+Notice that when we use our shift parameter, 
