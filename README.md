@@ -1,4 +1,4 @@
-# econ21300_projects
+# Data Interpretation in Economic Analysis Repo (Allen Hu)
 
 This folder contains some econometric projects conducted for a data science course led by Prof. Steven Levitt at the University of Chicago
 
